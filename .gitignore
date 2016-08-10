@@ -18,3 +18,11 @@ _autosave-*
 # Exported BOM files
 *.xml
 *.csv
+*.svg
+*.pdf
+
+# private information
+fp-lib-table
+
+*-cache.lib
+
