@@ -1,5 +1,4 @@
 EESchema Schematic File Version 2
-LIBS:dotmatrix_64x24-rescue
 LIBS:power
 LIBS:device
 LIBS:transistors
