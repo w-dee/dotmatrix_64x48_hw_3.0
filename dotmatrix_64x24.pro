@@ -1,4 +1,4 @@
-update=2016年08月12日 11時55分46秒
+update=2016年08月18日 10時53分30秒
 version=1
 last_client=kicad
 [pcbnew]
@@ -60,3 +60,4 @@ LibName28=contrib
 LibName29=valves
 LibName30=DeeComponents
 LibName31=wroom-02
+LibName32=bb-ch340t
