@@ -923,9 +923,7 @@ Wire Wire Line
 Wire Wire Line
 	5600 4900 5900 4900
 Wire Wire Line
-	5600 4800 5750 4800
-Wire Wire Line
-	5750 4800 5900 4800
+	5600 4800 5900 4800
 Wire Wire Line
 	5600 4700 5900 4700
 Wire Wire Line
@@ -1109,189 +1107,13 @@ Wire Wire Line
 Wire Wire Line
 	4050 4900 4050 5150
 Wire Bus Line
-	850  3250 1250 3250
-Wire Bus Line
-	1250 3250 1350 3250
-Wire Bus Line
-	1350 3250 1450 3250
-Wire Bus Line
-	1450 3250 1550 3250
-Wire Bus Line
-	1550 3250 1650 3250
-Wire Bus Line
-	1650 3250 1750 3250
-Wire Bus Line
-	1750 3250 1850 3250
-Wire Bus Line
-	1850 3250 1950 3250
-Wire Bus Line
-	1950 3250 2600 3250
-Wire Bus Line
-	2600 3250 2700 3250
-Wire Bus Line
-	2700 3250 2800 3250
-Wire Bus Line
-	2800 3250 2900 3250
-Wire Bus Line
-	2900 3250 3000 3250
-Wire Bus Line
-	3000 3250 3100 3250
-Wire Bus Line
-	3100 3250 3200 3250
-Wire Bus Line
-	3200 3250 3300 3250
-Wire Bus Line
-	3300 3250 3950 3250
-Wire Bus Line
-	3950 3250 4050 3250
-Wire Bus Line
-	4050 3250 4150 3250
-Wire Bus Line
-	4150 3250 4250 3250
-Wire Bus Line
-	4250 3250 4350 3250
-Wire Bus Line
-	4350 3250 4450 3250
-Wire Bus Line
-	4450 3250 4550 3250
-Wire Bus Line
-	4550 3250 4650 3250
-Wire Bus Line
-	4650 3250 4900 3250
+	850  3250 4900 3250
 Wire Bus Line
 	850  750  850  3250
 Wire Bus Line
 	1050 750  850  750 
 Wire Bus Line
-	2700 700  2950 700 
-Wire Bus Line
-	2950 700  3050 700 
-Wire Bus Line
-	3050 700  3150 700 
-Wire Bus Line
-	3150 700  3250 700 
-Wire Bus Line
-	3250 700  3350 700 
-Wire Bus Line
-	3350 700  3450 700 
-Wire Bus Line
-	3450 700  3550 700 
-Wire Bus Line
-	3550 700  3650 700 
-Wire Bus Line
-	3650 700  3750 700 
-Wire Bus Line
-	3750 700  3850 700 
-Wire Bus Line
-	3850 700  3950 700 
-Wire Bus Line
-	3950 700  4050 700 
-Wire Bus Line
-	4050 700  4150 700 
-Wire Bus Line
-	4150 700  4250 700 
-Wire Bus Line
-	4250 700  4350 700 
-Wire Bus Line
-	4350 700  4450 700 
-Wire Bus Line
-	4450 700  5050 700 
-Wire Bus Line
-	5050 700  5150 700 
-Wire Bus Line
-	5150 700  5250 700 
-Wire Bus Line
-	5250 700  5350 700 
-Wire Bus Line
-	5350 700  5450 700 
-Wire Bus Line
-	5450 700  5550 700 
-Wire Bus Line
-	5550 700  5650 700 
-Wire Bus Line
-	5650 700  5750 700 
-Wire Bus Line
-	5750 700  5850 700 
-Wire Bus Line
-	5850 700  5950 700 
-Wire Bus Line
-	5950 700  6050 700 
-Wire Bus Line
-	6050 700  6150 700 
-Wire Bus Line
-	6150 700  6250 700 
-Wire Bus Line
-	6250 700  6350 700 
-Wire Bus Line
-	6350 700  6450 700 
-Wire Bus Line
-	6450 700  6550 700 
-Wire Bus Line
-	6550 700  7150 700 
-Wire Bus Line
-	7150 700  7250 700 
-Wire Bus Line
-	7250 700  7350 700 
-Wire Bus Line
-	7350 700  7450 700 
-Wire Bus Line
-	7450 700  7550 700 
-Wire Bus Line
-	7550 700  7650 700 
-Wire Bus Line
-	7650 700  7750 700 
-Wire Bus Line
-	7750 700  7850 700 
-Wire Bus Line
-	7850 700  7950 700 
-Wire Bus Line
-	7950 700  8050 700 
-Wire Bus Line
-	8050 700  8150 700 
-Wire Bus Line
-	8150 700  8250 700 
-Wire Bus Line
-	8250 700  8350 700 
-Wire Bus Line
-	8350 700  8450 700 
-Wire Bus Line
-	8450 700  8550 700 
-Wire Bus Line
-	8550 700  8650 700 
-Wire Bus Line
-	8650 700  9250 700 
-Wire Bus Line
-	9250 700  9350 700 
-Wire Bus Line
-	9350 700  9450 700 
-Wire Bus Line
-	9450 700  9550 700 
-Wire Bus Line
-	9550 700  9650 700 
-Wire Bus Line
-	9650 700  9750 700 
-Wire Bus Line
-	9750 700  9850 700 
-Wire Bus Line
-	9850 700  9950 700 
-Wire Bus Line
-	9950 700  10050 700 
-Wire Bus Line
-	10050 700  10150 700 
-Wire Bus Line
-	10150 700  10250 700 
-Wire Bus Line
-	10250 700  10350 700 
-Wire Bus Line
-	10350 700  10450 700 
-Wire Bus Line
-	10450 700  10550 700 
-Wire Bus Line
-	10550 700  10650 700 
-Wire Bus Line
-	10650 700  10750 700 
-Wire Bus Line
-	10750 700  11050 700 
+	2700 700  11050 700 
 Wire Wire Line
 	3350 1000 3350 800 
 Wire Wire Line
@@ -1485,23 +1307,13 @@ F 3 "" H 10100 4700 50  0000 C CNN
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	9900 4450 9950 4450
-Wire Wire Line
-	9950 4450 10100 4450
-Wire Wire Line
-	10100 4450 10300 4450
+	9900 4450 10300 4450
 Text HLabel 10300 4450 2    60   Input ~ 0
 BUTTONSENSE
 Wire Wire Line
-	9950 4450 9950 4150
+	9950 4150 9950 4450
 Wire Wire Line
-	9950 4150 9150 4150
-Wire Wire Line
-	9150 4150 8750 4150
-Wire Wire Line
-	8750 4150 8600 4150
-Wire Wire Line
-	8600 4150 8550 4150
+	8550 4150 9950 4150
 Connection ~ 9950 4450
 Wire Wire Line
 	9150 4450 9150 4150
@@ -1514,9 +1326,7 @@ Connection ~ 8750 4150
 Wire Wire Line
 	7800 4150 7800 4250
 Wire Wire Line
-	7800 4250 8350 4250
-Wire Wire Line
-	8350 4250 8600 4250
+	7800 4250 8600 4250
 Wire Wire Line
 	8600 4250 8600 4150
 Connection ~ 8600 4150
@@ -1539,9 +1349,7 @@ $EndComp
 Text Label 5550 3250 3    60   ~ 0
 LEDLOGICVDD
 Wire Wire Line
-	5750 3550 5750 3500
-Wire Wire Line
-	5750 3500 5750 3250
+	5750 3250 5750 3550
 Wire Wire Line
 	5750 3850 5750 4800
 Connection ~ 5750 4800
@@ -1652,7 +1460,7 @@ Connection ~ 8600 5400
 Wire Wire Line
 	8300 5500 8400 5500
 Wire Wire Line
-	8400 5500 8400 5400
+	8400 5400 8400 5500
 Connection ~ 8400 5400
 $Comp
 L GND #PWR70
@@ -1696,9 +1504,7 @@ Wire Wire Line
 Wire Wire Line
 	6650 5600 6400 5600
 Wire Wire Line
-	6400 5500 6400 5600
-Wire Wire Line
-	6400 5600 6400 5700
+	6400 5500 6400 5700
 Connection ~ 6400 5600
 NoConn ~ 6650 5700
 $Comp
@@ -1707,22 +1513,18 @@ U 1 1 57AD6FE4
 P 7850 5100
 F 0 "JP6" H 7850 5193 50  0000 C CNN
 F 1 "Jumper_NO_Small" H 7860 5040 50  0001 C CNN
-F 2 "Resistors_SMD:R_0603_HandSoldering" H 7850 5194 50  0001 C CNN
+F 2 "components:SolderJumper" H 7850 5194 50  0001 C CNN
 F 3 "" H 7850 5100 50  0000 C CNN
 	1    7850 5100
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	7750 5100 7650 5100
+	6600 5100 7750 5100
 Wire Wire Line
-	7650 5100 6600 5100
-Wire Wire Line
-	6600 5100 6600 5400
+	6600 5400 6600 5100
 Connection ~ 6600 5400
 Wire Wire Line
-	7950 5100 8100 5100
-Wire Wire Line
-	8100 5100 8350 5100
+	7950 5100 8350 5100
 Wire Wire Line
 	8350 5100 8350 5400
 Connection ~ 8350 5400
@@ -1732,7 +1534,7 @@ U 1 1 57AD787E
 P 7850 4900
 F 0 "JP5" H 7850 4993 50  0000 C CNN
 F 1 "Jumper_NO_Small" H 7860 4840 50  0001 C CNN
-F 2 "Resistors_SMD:R_0603_HandSoldering" H 7850 4994 50  0001 C CNN
+F 2 "components:SolderJumper" H 7850 4994 50  0001 C CNN
 F 3 "" H 7850 4900 50  0000 C CNN
 	1    7850 4900
 	1    0    0    -1  
@@ -1789,19 +1591,7 @@ Connection ~ 5750 3500
 Text Label 5150 6550 3    60   ~ 0
 LEDLOGICVDD
 Wire Wire Line
-	5150 6550 5350 6550
-Wire Wire Line
-	5350 6550 5550 6550
-Wire Wire Line
-	5550 6550 5750 6550
-Wire Wire Line
-	5750 6550 5950 6550
-Wire Wire Line
-	5950 6550 6150 6550
-Wire Wire Line
-	6150 6550 6350 6550
-Wire Wire Line
-	6350 6550 6550 6550
+	5150 6550 6550 6550
 Connection ~ 5350 6550
 Connection ~ 5550 6550
 Connection ~ 5750 6550
@@ -1853,15 +1643,7 @@ F 3 "" H 8600 5700 50  0000 C CNN
 	-1   0    0    -1  
 $EndComp
 Wire Wire Line
-	5250 5400 5600 5400
-Wire Wire Line
-	5600 5400 5800 5400
-Wire Wire Line
-	5800 5400 6000 5400
-Wire Wire Line
-	6000 5400 6600 5400
-Wire Wire Line
-	6600 5400 6650 5400
+	5250 5400 6650 5400
 Connection ~ 5800 5400
 Connection ~ 8800 5400
 Connection ~ 10150 5400
@@ -1891,37 +1673,17 @@ F 3 "" H 9450 5450 50  0000 C CNN
 	0    -1   -1   0   
 $EndComp
 Wire Wire Line
-	8300 5400 8350 5400
+	8300 5400 9250 5400
 Wire Wire Line
-	8350 5400 8400 5400
-Wire Wire Line
-	8400 5400 8600 5400
-Wire Wire Line
-	8600 5400 8800 5400
-Wire Wire Line
-	8800 5400 9250 5400
-Wire Wire Line
-	9250 5300 9250 5400
-Wire Wire Line
-	9250 5400 9250 5450
+	9250 5300 9250 5450
 Wire Wire Line
 	9250 5450 9350 5450
 Wire Wire Line
 	9650 5450 9550 5450
 Wire Wire Line
-	9650 5300 9650 5400
+	9650 5300 9650 5450
 Wire Wire Line
-	9650 5400 9650 5450
-Wire Wire Line
-	9650 5400 10150 5400
-Wire Wire Line
-	10150 5400 10350 5400
-Wire Wire Line
-	10350 5400 10550 5400
-Wire Wire Line
-	10550 5400 10750 5400
-Wire Wire Line
-	10750 5400 10800 5400
+	9650 5400 10800 5400
 Wire Wire Line
 	9550 5300 9650 5300
 Connection ~ 9650 5400

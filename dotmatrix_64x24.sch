@@ -430,7 +430,7 @@ U 1 1 57A1F65E
 P 9050 1500
 F 0 "JP4" H 9050 1450 50  0000 C CNN
 F 1 "Jumper_NC_Small" H 9060 1440 50  0001 C CNN
-F 2 "Resistors_SMD:R_0603_HandSoldering" H 9050 1500 50  0001 C CNN
+F 2 "components:SolderJumper" H 9050 1500 50  0001 C CNN
 F 3 "" H 9050 1500 50  0000 C CNN
 	1    9050 1500
 	1    0    0    -1  
@@ -621,7 +621,7 @@ U 1 1 57A1C326
 P 4150 2450
 F 0 "JP1" H 4300 2500 50  0000 C CNN
 F 1 "Jumper_NC_Small" H 4160 2390 50  0001 C CNN
-F 2 "Resistors_SMD:R_0603_HandSoldering" H 4150 2450 50  0001 C CNN
+F 2 "components:SolderJumper" H 4150 2450 50  0001 C CNN
 F 3 "" H 4150 2450 50  0000 C CNN
 	1    4150 2450
 	1    0    0    -1  
@@ -632,7 +632,7 @@ U 1 1 57A99FB4
 P 2700 2700
 F 0 "JP2" H 2850 2750 50  0000 C CNN
 F 1 "Jumper_NC_Small" H 2710 2640 50  0001 C CNN
-F 2 "Resistors_SMD:R_0603_HandSoldering" H 2700 2700 50  0001 C CNN
+F 2 "components:SolderJumper" H 2700 2700 50  0001 C CNN
 F 3 "" H 2700 2700 50  0000 C CNN
 	1    2700 2700
 	1    0    0    -1  
@@ -643,7 +643,7 @@ U 1 1 57A9BABE
 P 2700 2800
 F 0 "JP3" H 2850 2850 50  0000 C CNN
 F 1 "Jumper_NC_Small" H 2710 2740 50  0001 C CNN
-F 2 "Resistors_SMD:R_0603_HandSoldering" H 2700 2800 50  0001 C CNN
+F 2 "components:SolderJumper" H 2700 2800 50  0001 C CNN
 F 3 "" H 2700 2800 50  0000 C CNN
 	1    2700 2800
 	1    0    0    -1  
@@ -904,7 +904,7 @@ U 1 1 57B05883
 P 10300 6250
 F 0 "H1" H 10358 6324 50  0000 L CNN
 F 1 "TEST_1P" H 10358 6279 50  0001 L CNN
-F 2 "Mounting_Holes:MountingHole_3.2mm_M3" H 10358 6279 50  0001 L CNN
+F 2 "components:MountingHole_3.2mm_M3" H 10358 6279 50  0001 L CNN
 F 3 "" H 10500 6250 50  0000 C CNN
 	1    10300 6250
 	1    0    0    -1  
@@ -926,7 +926,7 @@ U 1 1 57B0657B
 P 10550 6250
 F 0 "H2" H 10608 6324 50  0000 L CNN
 F 1 "TEST_1P" H 10608 6279 50  0001 L CNN
-F 2 "Mounting_Holes:MountingHole_3.2mm_M3" H 10608 6279 50  0001 L CNN
+F 2 "components:MountingHole_3.2mm_M3" H 10608 6279 50  0001 L CNN
 F 3 "" H 10750 6250 50  0000 C CNN
 	1    10550 6250
 	1    0    0    -1  
@@ -937,7 +937,7 @@ U 1 1 57B065E6
 P 10800 6250
 F 0 "H3" H 10858 6324 50  0000 L CNN
 F 1 "TEST_1P" H 10858 6279 50  0001 L CNN
-F 2 "Mounting_Holes:MountingHole_3.2mm_M3" H 10858 6279 50  0001 L CNN
+F 2 "components:MountingHole_3.2mm_M3" H 10858 6279 50  0001 L CNN
 F 3 "" H 11000 6250 50  0000 C CNN
 	1    10800 6250
 	1    0    0    -1  
@@ -948,7 +948,7 @@ U 1 1 57B06654
 P 11050 6250
 F 0 "H4" H 11108 6324 50  0000 L CNN
 F 1 "TEST_1P" H 11108 6279 50  0001 L CNN
-F 2 "Mounting_Holes:MountingHole_3.2mm_M3" H 11108 6279 50  0001 L CNN
+F 2 "components:MountingHole_3.2mm_M3" H 11108 6279 50  0001 L CNN
 F 3 "" H 11250 6250 50  0000 C CNN
 	1    11050 6250
 	1    0    0    -1  
@@ -1437,37 +1437,6 @@ Wire Wire Line
 Wire Wire Line
 	7300 2900 7750 2900
 Connection ~ 7300 2200
-$Comp
-L R R24
-U 1 1 57B2A2DB
-P 10650 5450
-F 0 "R24" V 10650 5400 50  0000 L CNN
-F 1 "120R" V 10700 5150 50  0000 L CNN
-F 2 "Resistors_SMD:R_0603_HandSoldering" V 10580 5450 50  0001 C CNN
-F 3 "" H 10650 5450 50  0000 C CNN
-	1    10650 5450
-	-1   0    0    1   
-$EndComp
-$Comp
-L GND #PWR39
-U 1 1 57B2A7DB
-P 10950 5650
-F 0 "#PWR39" H 10950 5400 50  0001 C CNN
-F 1 "GND" H 10955 5477 50  0000 C CNN
-F 2 "" H 10950 5650 50  0000 C CNN
-F 3 "" H 10950 5650 50  0000 C CNN
-	1    10950 5650
-	1    0    0    -1  
-$EndComp
-Wire Wire Line
-	10650 5600 10950 5600
-Wire Wire Line
-	10950 5100 10950 5650
-Wire Wire Line
-	10950 5100 10650 5100
-Wire Wire Line
-	10650 5100 10650 5300
-Connection ~ 10950 5600
 Text Label 8800 4000 0    60   ~ 0
 SCL
 Text Label 8800 4150 0    60   ~ 0
@@ -1903,7 +1872,7 @@ U 1 1 57B54382
 P 1900 6400
 F 0 "JP7" H 2050 6450 50  0000 C CNN
 F 1 "Jumper_NC_Small" H 1910 6340 50  0001 C CNN
-F 2 "Resistors_SMD:R_0603_HandSoldering" H 1900 6400 50  0001 C CNN
+F 2 "components:SolderJumper" H 1900 6400 50  0001 C CNN
 F 3 "" H 1900 6400 50  0000 C CNN
 	1    1900 6400
 	0    1    1    0   
@@ -1923,7 +1892,7 @@ U 1 1 57B563D2
 P 4750 5950
 F 0 "JP9" H 4900 6000 50  0000 C CNN
 F 1 "Jumper_NC_Small" H 4760 5890 50  0001 C CNN
-F 2 "Resistors_SMD:R_0603_HandSoldering" H 4750 5950 50  0001 C CNN
+F 2 "components:SolderJumper" H 4750 5950 50  0001 C CNN
 F 3 "" H 4750 5950 50  0000 C CNN
 	1    4750 5950
 	1    0    0    -1  
@@ -1934,7 +1903,7 @@ U 1 1 57B569B9
 P 4750 6050
 F 0 "JP10" H 4900 6100 50  0000 C CNN
 F 1 "Jumper_NC_Small" H 4760 5990 50  0001 C CNN
-F 2 "Resistors_SMD:R_0603_HandSoldering" H 4750 6050 50  0001 C CNN
+F 2 "components:SolderJumper" H 4750 6050 50  0001 C CNN
 F 3 "" H 4750 6050 50  0000 C CNN
 	1    4750 6050
 	1    0    0    -1  
@@ -1949,7 +1918,7 @@ U 1 1 57B57790
 P 3150 5500
 F 0 "JP8" H 3300 5550 50  0000 C CNN
 F 1 "Jumper_NC_Small" H 3160 5440 50  0001 C CNN
-F 2 "Resistors_SMD:R_0603_HandSoldering" H 3150 5500 50  0001 C CNN
+F 2 "components:SolderJumper" H 3150 5500 50  0001 C CNN
 F 3 "" H 3150 5500 50  0000 C CNN
 	1    3150 5500
 	0    1    1    0   
@@ -1957,7 +1926,7 @@ $EndComp
 Wire Wire Line
 	3150 5400 3150 5300
 Text Label 2000 6900 0    60   ~ 0
-USB_DM
+USB_D_N
 Text Label 2000 6800 0    60   ~ 0
-USB_DP
+USB_D_P
 $EndSCHEMATC
