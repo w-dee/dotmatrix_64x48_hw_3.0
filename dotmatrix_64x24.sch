@@ -1817,7 +1817,7 @@ U 1 1 57B60C73
 P 3000 7150
 F 0 "Y1" H 3000 7375 50  0000 C CNN
 F 1 "12MHz" H 3000 7284 50  0000 C CNN
-F 2 "Crystals:Crystal_HC49-U_Vertical" H 3000 7283 50  0001 C CNN
+F 2 "components:Crystal_HC49-U_Vertical_SMD_Universal" H 3000 7283 50  0001 C CNN
 F 3 "" H 3000 7150 50  0000 C CNN
 	1    3000 7150
 	1    0    0    -1  
