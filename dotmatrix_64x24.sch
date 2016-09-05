@@ -1016,7 +1016,7 @@ L R R32
 U 1 1 57B29598
 P 8250 3050
 F 0 "R32" V 8250 2950 50  0000 L CNN
-F 1 "10k" V 8200 3150 50  0000 L CNN
+F 1 "10k DNI" V 8200 3150 50  0000 L CNN
 F 2 "Resistors_SMD:R_0603_HandSoldering" V 8180 3050 50  0001 C CNN
 F 3 "" H 8250 3050 50  0000 C CNN
 	1    8250 3050
@@ -1332,7 +1332,7 @@ USB_D_N
 Text Label 2000 6800 0    60   ~ 0
 USB_D_P
 Text Label 2100 1700 0    60   ~ 0
-IR
+IR_OUT
 Wire Wire Line
 	2150 1400 3200 1400
 Wire Wire Line
@@ -1773,7 +1773,8 @@ F1 "IR_Sensor_RTC.sch" 60
 F2 "SCL" I L 9250 3300 60 
 F3 "SDA" I L 9250 3400 60 
 F4 "ESPVDD" I L 9250 3550 60 
-F5 "IR" I L 9250 3700 60 
+F5 "IR_OUT" I L 9250 3700 60 
+F6 "IR_IN" I L 9250 3850 60 
 $EndSheet
 Wire Wire Line
 	8900 3300 9250 3300
@@ -1790,7 +1791,7 @@ SDA
 Text Label 8900 3550 0    60   ~ 0
 ESPVDD
 Text Label 8900 3700 0    60   ~ 0
-IR
+IR_OUT
 $Comp
 L C C35
 U 1 1 57BEE433
@@ -1882,4 +1883,47 @@ $EndComp
 Wire Wire Line
 	3800 2800 3800 2300
 Connection ~ 3800 2300
+$Comp
+L R R38
+U 1 1 57CDE645
+P 8000 650
+F 0 "R38" V 8000 550 50  0000 L CNN
+F 1 "10k" V 7950 750 50  0000 L CNN
+F 2 "Resistors_SMD:R_0603_HandSoldering" V 7930 650 50  0001 C CNN
+F 3 "" H 8000 650 50  0000 C CNN
+	1    8000 650 
+	0    1    -1   0   
+$EndComp
+$Comp
+L R R39
+U 1 1 57CDE64B
+P 8000 750
+F 0 "R39" V 8000 650 50  0000 L CNN
+F 1 "10k" V 7950 850 50  0000 L CNN
+F 2 "Resistors_SMD:R_0603_HandSoldering" V 7930 750 50  0001 C CNN
+F 3 "" H 8000 750 50  0000 C CNN
+	1    8000 750 
+	0    1    -1   0   
+$EndComp
+Wire Wire Line
+	7800 1200 7800 650 
+Wire Wire Line
+	7800 650  7850 650 
+Connection ~ 7800 1200
+Wire Wire Line
+	7850 750  7800 750 
+Connection ~ 7800 750 
+Wire Wire Line
+	8150 750  8300 750 
+Wire Wire Line
+	8300 750  8300 650 
+Wire Wire Line
+	8150 650  8450 650 
+Connection ~ 8300 650 
+Text Label 8450 650  0    60   ~ 0
+IR_IN
+Wire Wire Line
+	8900 3850 9250 3850
+Text Label 8900 3850 0    60   ~ 0
+IR_IN
 $EndSCHEMATC
