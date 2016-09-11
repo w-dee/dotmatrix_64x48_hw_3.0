@@ -1145,7 +1145,7 @@ U 1 1 57A0EDFF
 P 5600 5550
 F 0 "C4" H 5550 5150 50  0000 L CNN
 F 1 "100u" H 5550 5050 50  0000 L CNN
-F 2 "Capacitors_ThroughHole:C_Radial_D6.3_L11.2_P2.5" H 5718 5459 50  0001 L CNN
+F 2 "components:C_Radial_D6.3_L11.2_P2.5_hand_soldering" H 5718 5459 50  0001 L CNN
 F 3 "" H 5600 5550 50  0000 C CNN
 	1    5600 5550
 	-1   0    0    -1  
@@ -1167,7 +1167,7 @@ U 1 1 57A0EE0B
 P 5800 5550
 F 0 "C5" H 5750 5150 50  0000 L CNN
 F 1 "100u" H 5750 5050 50  0000 L CNN
-F 2 "Capacitors_ThroughHole:C_Radial_D6.3_L11.2_P2.5" H 5918 5459 50  0001 L CNN
+F 2 "components:C_Radial_D6.3_L11.2_P2.5_hand_soldering" H 5918 5459 50  0001 L CNN
 F 3 "" H 5800 5550 50  0000 C CNN
 	1    5800 5550
 	-1   0    0    -1  
@@ -1429,7 +1429,7 @@ U 1 1 57A0837B
 P 10300 5600
 F 0 "C7" H 10250 5200 50  0000 L CNN
 F 1 "100u" H 10250 5050 50  0000 L CNN
-F 2 "Capacitors_ThroughHole:C_Radial_D6.3_L11.2_P2.5" H 10418 5509 50  0001 L CNN
+F 2 "components:C_Radial_D6.3_L11.2_P2.5_hand_soldering" H 10418 5509 50  0001 L CNN
 F 3 "" H 10300 5600 50  0000 C CNN
 	1    10300 5600
 	-1   0    0    -1  
@@ -1985,7 +1985,7 @@ U 1 1 57C5781D
 P 9700 5600
 F 0 "C39" H 9650 5200 50  0000 L CNN
 F 1 "100u" H 9650 5050 50  0000 L CNN
-F 2 "Capacitors_ThroughHole:C_Radial_D6.3_L11.2_P2.5" H 9818 5509 50  0001 L CNN
+F 2 "components:C_Radial_D6.3_L11.2_P2.5_hand_soldering" H 9818 5509 50  0001 L CNN
 F 3 "" H 9700 5600 50  0000 C CNN
 	1    9700 5600
 	-1   0    0    -1  
