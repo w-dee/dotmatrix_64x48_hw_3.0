@@ -2064,7 +2064,7 @@ Wire Wire Line
 Wire Wire Line
 	7350 5750 7450 5750
 $Comp
-L Jumper_NC_Small JP5
+L Jumper_NO_Small JP5
 U 1 1 57C5B03A
 P 8450 4700
 F 0 "JP5" H 8450 4821 50  0000 C CNN
@@ -2075,7 +2075,7 @@ F 3 "" H 8450 4700 50  0000 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Jumper_NC_Small JP6
+L Jumper_NO_Small JP6
 U 1 1 57C5B040
 P 8450 4900
 F 0 "JP6" H 8450 5021 50  0000 C CNN
