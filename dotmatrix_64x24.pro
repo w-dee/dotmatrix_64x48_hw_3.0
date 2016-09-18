@@ -1,4 +1,4 @@
-update=2016年08月18日 10時53分30秒
+update=2016年09月17日 16時38分28秒
 version=1
 last_client=kicad
 [pcbnew]
@@ -23,8 +23,6 @@ ModuleOutlineThickness=0.150000000000
 [cvpcb]
 version=1
 NetIExt=net
-[general]
-version=1
 [eeschema]
 version=1
 LibDir=../kicad-library/components
@@ -61,3 +59,5 @@ LibName29=valves
 LibName30=DeeComponents
 LibName31=wroom-02
 LibName32=bb-ch340t
+[general]
+version=1
