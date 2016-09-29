@@ -1,4 +1,4 @@
-(kicad_pcb (version 20160815) (host pcbnew 4.1.0-alpha+201609070929+7135~54~ubuntu16.04.1-product)
+(kicad_pcb (version 20160815) (host pcbnew 4.1.0-alpha+201609050732+7118~50~ubuntu14.04.1-product)
 
   (general
     (links 1522)
@@ -69,8 +69,8 @@
     (aux_axis_origin 0 0)
     (visible_elements FFFEFF7F)
     (pcbplotparams
-      (layerselection 0x00030_ffffffff)
-      (usegerberextensions false)
+      (layerselection 0x010f0_ffffffff)
+      (usegerberextensions true)
       (excludeedgelayer true)
       (linewidth 0.100000)
       (plotframeref false)
@@ -86,12 +86,12 @@
       (plotvalue true)
       (plotinvisibletext false)
       (padsonsilk false)
-      (subtractmaskfromsilk false)
-      (outputformat 4)
+      (subtractmaskfromsilk true)
+      (outputformat 1)
       (mirror false)
       (drillshape 0)
       (scaleselection 1)
-      (outputdirectory ""))
+      (outputdirectory gerber/))
   )
 
   (net 0 "")
