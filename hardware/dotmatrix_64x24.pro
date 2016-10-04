@@ -1,4 +1,4 @@
-update=2016年09月30日 19時25分22秒
+update=2016年10月04日 10時47分07秒
 version=1
 last_client=kicad
 [pcbnew]
@@ -27,7 +27,7 @@ NetIExt=net
 version=1
 [eeschema]
 version=1
-LibDir=../kicad-library/components/
+LibDir=../../kicad-library/components
 [eeschema/libraries]
 LibName1=power
 LibName2=device
@@ -58,6 +58,6 @@ LibName26=opto
 LibName27=atmel
 LibName28=contrib
 LibName29=valves
-LibName30=../kicad-library/components/wroom-02
-LibName31=../kicad-library/components/bb-ch340t
-LibName32=../kicad-library/components/DeeComponents
+LibName30=DeeComponents
+LibName31=bb-ch340t
+LibName32=wroom-02
