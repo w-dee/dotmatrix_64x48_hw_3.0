@@ -28,9 +28,9 @@ LIBS:opto
 LIBS:atmel
 LIBS:contrib
 LIBS:valves
-LIBS:DeeComponents
 LIBS:wroom-02
 LIBS:bb-ch340t
+LIBS:DeeComponents
 LIBS:dotmatrix_64x24-cache
 EELAYER 25 0
 EELAYER END
