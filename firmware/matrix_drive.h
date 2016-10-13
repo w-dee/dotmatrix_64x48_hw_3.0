@@ -3,7 +3,7 @@
 
 void led_init_gpio();
 void led_init_led1642();
-
+void led_init_timer();
 
 #endif
 
