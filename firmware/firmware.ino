@@ -79,8 +79,6 @@ void loop()
 {
   test_led_sel_row();
   server.handleClient();
-  Serial.println(WiFi.localIP());
-  Serial.println(WiFi.RSSI());
 
 }
 

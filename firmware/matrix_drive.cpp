@@ -1,10 +1,10 @@
 #include <Arduino.h>
 #include "eagle_soc.h"
 
-#define LED_COL_SER_GPIO 13
-#define LED_COL_LATCH_GPIO 4
+#define LED_COL_SER_GPIO 13 // 13=MOSI
+#define LED_COL_LATCH_GPIO 12 // 12=MISO, but in DIO mode, it acts as second line of MOSI
 #define LED_HC595_LATCH_GPIO 15
-#define LED_SER_CLOCK_GPIO 5
+#define LED_SER_CLOCK_GPIO 14 // 14=SCK
 
 #define LED_MAX_ROW 24
 #define LED_MAX_COL 64
@@ -145,6 +145,10 @@ static unsigned char frame_buffer[LED_MAX_ROW][LED_MAX_COL] = {
 	#include "op.inc"
 };
 static int current_row; // current scanning row
+static int current_phase; // current phase; 18 stage phase.
+	// current_phase:  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17
+	//           led: 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1     0
+	//           row:                                              bl    st (blank, set)
 
 static int interrupt_count;
 
@@ -158,38 +162,52 @@ static void ICACHE_RAM_ATTR led_set_brightness()
 	// TODO: write stride explanation here
 	const uint8_t *buf = frame_buffer[current_row];
 
-  static const uint16_t gamma_table[256] = {
-    G64(0) G64(64) G64(128) G64(192)
-  }; // this table must be accessible from interrupt routine;
-   // do not place in FLASH !!
+	static const uint16_t gamma_table[256] = {
+	G64(0) G64(64) G64(128) G64(192)
+	}; // this table must be accessible from interrupt routine;
+	// do not place in FLASH !!
 
-	// GPIO value cache
-	uint32_t gpo = GPO;
+	static const int phase_to_led[18] = {
+		15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,1,0,0};
 
-	// for each leds in an LED1642
-	for(int led = 15; led >= 0; --led)
+	if(current_phase == 15)
 	{
-		const uint8_t *b = buf + led + ((LED_MAX_COL / 16)-1)*16;
+		// blank row
+		led_sel_row(LED_MAX_ROW);
+		PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO0_U, FUNC_GPIO0 ); // disable 26MHz output ...
+	}
+	else if(current_phase == 17)
+	{
+		// enable 26MHz output on GPIO0 for LED1642 PWCLK
+		PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO0_U, FUNC_CLK_OUT );
+
+		// activate row driver
+		led_sel_row(current_row);
+
+		// step to next row
+		++ current_row;
+		if(current_row >= LED_MAX_ROW) current_row = 0;
+	}
+	else
+	{
+		int current_led = phase_to_led[current_phase];
+
+		// GPIO value cache
+		uint32_t gpo = GPO;
+
+		const uint8_t *b = buf + current_led + ((LED_MAX_COL / 16)-1)*16;
 
 		// for each LED1642
 		for(int i = 0; i < LED_MAX_COL / 16; ++i, b-=16)
 		{
-			bool do_global_latch = i == (LED_MAX_COL / 16) -1  && led == 0;
-			bool do_data_latch = i == (LED_MAX_COL / 16) -1  && led != 0;
-
-			// when issuing global latch, blank current row now
-			if(do_global_latch)
-			{
-				// once meke all LEDs blank
-				led_sel_row(LED_MAX_ROW);
-				PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO0_U, FUNC_GPIO0 ); // disable 26MHz output ...
-			}
+			bool do_global_latch = i == (LED_MAX_COL / 16) -1  && current_led == 0;
+			bool do_data_latch = i == (LED_MAX_COL / 16) -1  && current_led != 0;
 
 			// convert 256-step brightness to 4096-step brightness
 			uint32_t w = gamma_table[*b];
 
 			// for each control bit
-#define SET_BIT(N) do { \
+	#define SET_BIT(N) do { \
 			gpo &= ~  ( (1<<LED_COL_SER_GPIO) | (1<<LED_SER_CLOCK_GPIO)); \
 			if(w & (1<<(N))) gpo |= (1<<LED_COL_SER_GPIO); \
 			GPO = gpo; \
@@ -220,17 +238,8 @@ static void ICACHE_RAM_ATTR led_set_brightness()
 		}
 	}
 
-	// enable 26MHz output on GPIO0 for LED1642 PWCLK
-	PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO0_U, FUNC_CLK_OUT );
-
-	// activate row driver
-	led_sel_row(current_row);
-
-	// step to next row
-	++ current_row;
-	if(current_row >= LED_MAX_ROW) current_row = 0;
-
-
+	++current_phase;
+	if(current_phase == 18) current_phase = 0;
 }
 
 /**
@@ -241,7 +250,7 @@ static void ICACHE_RAM_ATTR timer_handler()
 	++interrupt_count;
 
 	// set brightness for one row
-//	led_set_brightness();
+	if(current_phase == 17) led_set_brightness();
 }
 
 /**
@@ -252,10 +261,11 @@ void led_init_timer()
 
 	timer1_isr_init();
 	timer1_attachInterrupt(timer_handler);
-	const uint32_t interval = 50412;//80000000L / (80*LED_MAX_ROW)+555; // 80Hz refresh
+	const uint32_t interval = 80000000L / (80*LED_MAX_ROW); // 80Hz refresh
 	static_assert(interval >= 0 && interval <= 8388607, "Timer interval out of range");
 	timer1_write(interval); 
 	timer1_enable(TIM_DIV1, TIM_EDGE, TIM_LOOP);
+
 }
 
 // 507ms / 200count
@@ -269,10 +279,8 @@ void led_init_timer()
 
 void test_led_sel_row()
 {
-	uint32_t start = millis();
-	interrupt_count = 0;
-	delay(1);
-	uint32_t end = millis();
-	Serial.printf("%d ms %d count\r\n", end - start, interrupt_count);
+	while(current_phase != 17) led_set_brightness();
+//	Serial.printf("%d ms %d count\r\n", end - start, interrupt_count);
+
 }
 
