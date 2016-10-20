@@ -33,9 +33,7 @@ void setup(void){
   Serial.begin(115200);
   Serial.print("\r\n\r\nWelcome\r\n");
 
-  led_init_gpio();
-  led_init_led1642();
-  led_init_timer();
+  led_init();
 
 
 
