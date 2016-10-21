@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include "eagle_soc.h"
+#include <ESP8266WiFi.h>
 
 #define LED_COL_SER_GPIO 13 // 13=MOSI
 #define LED_COL_LATCH_GPIO 12 // 12=MISO, but in DIO mode, it acts as second line of MOSI
@@ -18,22 +19,12 @@
     GP16O = !!val; \
   } }while(0)
 
+#define led_hc595_latch_out(b) /* HC595 latch is not controlled by hardware anyway */ \
+	dW(LED_HC595_LATCH_GPIO, (b))
+
 extern "C" {
 	void rom_i2c_writeReg_Mask(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
 }
-
-
-#define led_col_ser_out(b) dW(LED_COL_SER_GPIO, (b)) // for non-SPI mode
-
-#define led_col_latch_out(b) dW(LED_COL_LATCH_GPIO, (b)) // for non-SPI mode
-
-#define led_pulse_ser_clock() /* for non-SPI mode */ do { \
-	dW(LED_SER_CLOCK_GPIO, HIGH); \
-	dW(LED_SER_CLOCK_GPIO, LOW); \
-} while(0)
-
-#define led_hc595_latch_out(b) /* HC595 latch is not controlled by hardware anyway */ \
-	dW(LED_HC595_LATCH_GPIO, (b))
 
 
 /**
@@ -54,49 +45,7 @@ static void led_init_gpio()
 	digitalWrite(LED_SER_CLOCK_GPIO, LOW);
 }
 
-/**
-	Set LED1642 configuration register.
-	Note this function uses GPIO (not SPI hardware) to initialize
-	LED1642, call this function before calling led_init_spi_and_ledclock()
- */
-static void led_set_led1642_reg(int reg_no, uint16_t w)
-{
-	// for each LED1642
-	for(int i = 0; i < LED_MAX_COL / 16; i++)
-	{
-		// for each control bit
-		for(uint32_t bit = (1<<15); bit; bit >>= 1)
-		{
-			led_col_ser_out(bit & w);
 
-			// setting LED1642 config reg needs seven clock pulse
-			// while the latch signal is asserted.
-			// other register may use defferent pulse count.
-			if(i == (LED_MAX_COL / 16) -1 /* last LED1642 */)
-			{
-				if(bit == (1<<(reg_no-1)))
-					led_col_latch_out(true);
-			}
-
-			led_pulse_ser_clock();
-		}
-
-		led_col_latch_out(false);
-	}
-}
-
-/**
-	Initialize LED1642
- */
-static void led_init_led1642()
-{
-	led_set_led1642_reg(7, 
-		(1<<15) // 4096 brightness steps
-		); // write to config reg
-	led_set_led1642_reg(1,
-		0xffff // all led on
-		); // write to switch reg
-}
 
 
 /**
@@ -104,20 +53,17 @@ static void led_init_led1642()
  */
 static void led_init_spi_and_ledclock()
 {
-	// enable 26MHz output on GPIO0 for LED1642 PWCLK
-//	PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO0_U, FUNC_CLK_OUT );
-
 	// setup hardware SPI
 	SPI.begin();
 	SPI.setHwCs(false);
-	SPI.setFrequency(10000000);
+	SPI.setFrequency(11223419);
 	SPI1U = SPIUMOSI | SPIUSSE | SPIUFWDUAL;
 	SPI1C |= SPICFASTRD | SPICDOUT; // use DIO
 	SPI1C &= ~(SPICWBO | SPICRBO); // MSB first
 
-	// setup I2S clock output from GPIO15
-//	pinMode(15, FUNCTION_1); //I2SO_BCK (SCLK)
-	pinMode(3, FUNCTION_1); //I2SO_DATA (SDIN)
+	// setup I2S data output from GPIO3
+//	pinMode(15, FUNCTION_1); //I2SO_BCK (SCLK) // unused
+	pinMode(3, FUNCTION_1); //I2SO_DATA (SDIN) // used for spread-spectrum clock output
 
 	I2S_CLK_ENABLE();
 	I2SIC = 0x3F;
@@ -140,11 +86,12 @@ static void led_init_spi_and_ledclock()
 
 	// write FIFO pattern
 	// 8 rising edge in 32bit, and the clock is 80MHz, thus the output is 20MHz.
-	// we add an intended jitter to the pattern, to reduce EMI (spread spectrum).
+	// we add an intended jitter (spread spectrum) to the pattern, to reduce EMI.
 	// the I2S hardware in ESP8266 will repeat this pattern.
 	I2STXF = 
-//			0b11100011010010100000100001110110; // -9.261996db compared to 0b11001100...
-			0b11100110010010010000100001100100; 
+//			0b11100011010010100000100001110110; // ~~ -6db peak reduction compared to 0b11001100...
+			0b11100110010010010000100001100100; // more L than above; for pull-uped output
+//			0b11001100110011001100110011001100; // no SS pattern
 
 	// start I2S
 	I2SC |= I2STXS; //Start transmission
@@ -295,7 +242,6 @@ static void ICACHE_RAM_ATTR led_sel_row_commit()
 
 }
 
-
 /**
  * The frame buffer
  */
@@ -306,19 +252,21 @@ static unsigned char frame_buffer[LED_MAX_ROW][LED_MAX_COL] = {
 static int current_row; //!< current scanning row
 static int current_phase; //!< current phase; 6 stage phase.
 
-static constexpr int max_phase = 6; //!< phase count
+static constexpr int max_phase = 7; //!< phase count
 	// current_phase
-	// 0:             : row commit, led (15 14 13 12)
-	// 1:             : led (11 10  9  8)
-	// 2:             : led ( 7  6  5  4)
-	// 3:             : blank row
-	// 4:             : row commit, led ( 3  2  1  0)
-	// 5:             : set row
+	// 0:             : row commit, set LED1642 control word
+	// 1:             : led (15 14 13 12)
+	// 2:             : led (11 10  9  8)
+	// 3:             : led ( 7  6  5  4)
+	// 4:             : blank row
+	// 5:             : row commit, led ( 3  2  1  0)
+	// 6:             : set row
 
 	// the interrupt timing of each phase is like this:
-	// we try to minimize phase 3, 4, 5 duration, because
-	// in these phase LED are off, thus leads to dimmed display. 
-	// 0----------1---------2------------3---4-----5---
+	// we try to minimize phase 4, 5, 6 duration, because
+	// in these phase LED are off, long interrupt inverval
+	//  lead to dimmed display. 
+	// 0--1--------2---------3-----------4---5-----6---
 
 	// each phase is distributed into small interrupts,
 	// to minimize interrupt latency.
@@ -328,10 +276,11 @@ static constexpr int max_phase = 6; //!< phase count
  */
 static constexpr int32_t timer_interval = 32768; //!< timer hsync interval in 80MHz cycle
 static constexpr int32_t timer_duration_phase[max_phase] = //!< timer duration of each phase
-	{ 
-		8368,
+	{
+		3000,
+		6368,
 		8000,
-		8400,
+		7400,
 		2000,
 		4000,
 		2000
@@ -339,7 +288,9 @@ static constexpr int32_t timer_duration_phase[max_phase] = //!< timer duration o
 static_assert(
 	timer_duration_phase[0] + timer_duration_phase[1] +
 	timer_duration_phase[2] + timer_duration_phase[3] +
-	timer_duration_phase[4] + timer_duration_phase[5]  == timer_interval, "timer_interval sum mismatch");
+	timer_duration_phase[4] + timer_duration_phase[5] +
+	timer_duration_phase[6] 
+		== timer_interval, "timer_interval sum mismatch");
 
 static uint32_t next_tick;
 
@@ -352,51 +303,122 @@ static void ICACHE_RAM_ATTR led_set_brightness_one_row(int start_led)
 	static_assert(LED_MAX_COL == 64, "sorry at this point LED_MAX_COL is not flexible");
 	const uint8_t *buf = frame_buffer[current_row];
 
-
-
 	volatile uint32_t * fifoPtr = &SPI1W0;
 
 	while(SPI1CMD & SPIBUSY) /**/ ; // wait for previous SPI transaction
 	led_spi_set_length(32*16);
 
-	for(int led_i = 3 ; led_i >= 0; --led_i)
-	{
-		int current_led = start_led + led_i;
+	constexpr uint32_t global_latch_pattern =
+		byte_reverse(0b00000000000000000000001010101010);
+	constexpr uint32_t data_latch_pattern   =
+		byte_reverse(0b00000000000000000000000000101010);
 
-		const uint8_t *b = buf + current_led + ((LED_MAX_COL / 16)-1)*16;
-
-		// for each LED1642
-		for(int i = 0; i < LED_MAX_COL / 16; ++i, b-=16)
-		{
-			bool do_global_latch = i == (LED_MAX_COL / 16) -1  && current_led == 0;
-			bool do_data_latch   = i == (LED_MAX_COL / 16) -1  && current_led != 0;
-
-			// convert 256-step brightness to 4096-step brightness
-			uint32_t w = gamma_table[*b]; // note this table is already byte-reversed
-
-			// add latch pattern
-			constexpr uint32_t global_latch_pattern =
-				byte_reverse(0b00000000000000000000001010101010);
-			constexpr uint32_t data_latch_pattern   =
-				byte_reverse(0b00000000000000000000000000101010);
-			if(do_global_latch) w |= global_latch_pattern;
-			if(do_data_latch)   w |= data_latch_pattern;
-
-			// push to fifo
-			*(fifoPtr++) = w;
-			// note:
-			// every even bit of fifo goes to COLSER line (MOSI),
-			// and every odd bit of fifo goes to COLLATCH line (MISO).
-			// data written to fifo must be in big-endian because the hardware
-			// always pull a byte from the first byte (not word) of the fifo.
-		}
-	}
+	// fill fifo with buffer, with
+	// converting gamma and adding latch pattern
+#define WR(N, L) do { \
+	uint32_t w = gamma_table[buf[start_led + (N)]]; w += L; \
+	*(fifoPtr++) = w; } while(0)
+#define PL(I,C,L) WR((I) +  ((LED_MAX_COL / 16)-1)*16 + (C) * -16, L )
+	PL(3, 0, 0);
+	PL(3, 1, 0);
+	PL(3, 2, 0);
+	PL(3, 3, data_latch_pattern);
+	PL(2, 0, 0);
+	PL(2, 1, 0);
+	PL(2, 2, 0);
+	PL(2, 3, data_latch_pattern);
+	PL(1, 0, 0);
+	PL(1, 1, 0);
+	PL(1, 2, 0);
+	PL(1, 3, data_latch_pattern);
+	PL(0, 0, 0);
+	PL(0, 1, 0);
+	PL(0, 2, 0);
+	PL(0, 3, start_led == 0 ? global_latch_pattern : data_latch_pattern);
 
 
 	// begin SPI transaction
 	SPI1CMD |= SPIBUSY;
+}
+
+/**
+ Returns configuration pattern from register number. this return value can be used
+ in led_set_led1642_reg().
+ */
+static constexpr uint32_t ICACHE_RAM_ATTR config_reg_pattern_from_num(int n)
+{
+	// n = 1 ->  0b0010
+	// n = 2 ->  0b1010 ...
+	// n = 3 ->  0b101010 ...
+	return byte_reverse(((1U << n*2) - 1) & 0xaaaaaaaau);
+}
 
 
+/**
+	Set LED1642 configuration register.
+	Note this function uses SPI hardware to set the register.
+	call this function after calling led_init_spi_and_ledclock()
+	@param	 latch_pattern   latch pattern. this must be in form of eg.
+		byte_reverse(0b000000001010101010)
+		 when register number = 5. Every one must be in odd digit in the pettern
+		and the population count of '1' is the registernumber.
+	@param	register_pattern  register value which must be already converted by 
+		byte_reverse(bit_interleave()).
+ */
+static void ICACHE_RAM_ATTR led_set_led1642_reg(uint32_t latch_pattern, uint32_t register_pattern)
+{
+	while(SPI1CMD & SPIBUSY) /**/ ; // wait for previous SPI transaction
+
+
+	SPI1U |= SPIUFWDUAL;
+	SPI1C |= SPICFASTRD | SPICDOUT; // use DIO
+
+	volatile uint32_t * fifoPtr = &SPI1W0;
+
+	led_spi_set_length(32*4);
+
+	// for each LED1642
+	for(int i = 0; i < LED_MAX_COL / 16; ++i)
+	{
+		bool do_latch = i == (LED_MAX_COL / 16) -1;
+		uint32_t w = register_pattern;
+
+		if(do_latch)   w |= latch_pattern;
+
+		// push to fifo
+		*(fifoPtr++) = w;
+	}
+
+	// begin SPI transaction
+	SPI1CMD |= SPIBUSY;
+}
+
+/**
+ LED1642 configuration register word (must be already bit-interleaved by bit_interleave() )
+ */
+static uint32_t led1642_configration_reg;
+
+/**
+ * whether led1642_configration_reg has changed or not
+ */
+static bool led1642_configration_reg_changed;
+
+/**
+	Initialize LED1642
+ */
+static void led_init_led1642()
+{
+	led1642_configration_reg = byte_reverse(bit_interleave(1<<15)); // 4096 brightness steps
+	led_set_led1642_reg(
+		config_reg_pattern_from_num(7), 
+		led1642_configration_reg
+		); // write to config reg
+	while(SPI1CMD & SPIBUSY) /**/ ; // wait for previous SPI transaction
+	led_set_led1642_reg(
+		config_reg_pattern_from_num(1),
+		byte_reverse(bit_interleave(0xffff)) // all led on
+		); // write to switch reg
+	while(SPI1CMD & SPIBUSY) /**/ ; // wait for previous SPI transaction
 }
 
 /**
@@ -409,27 +431,36 @@ static void ICACHE_RAM_ATTR led_set_brightness()
 	{
 	case 0:
 		led_sel_row_commit();
-		led_set_brightness_one_row(12);
+		if(led1642_configration_reg_changed)
+		{
+			led_set_led1642_reg(config_reg_pattern_from_num(7),
+				led1642_configration_reg);
+			led1642_configration_reg_changed = false;
+		}
 		break;
 
 	case 1:
-		led_set_brightness_one_row(8);
+		led_set_brightness_one_row(12);
 		break;
 
 	case 2:
-		led_set_brightness_one_row(4);
+		led_set_brightness_one_row(8);
 		break;
 
 	case 3:
-		led_sel_row(-1);
+		led_set_brightness_one_row(4);
 		break;
 
 	case 4:
+		led_sel_row(-1);
+		break;
+
+	case 5:
 		led_sel_row_commit();
 		led_set_brightness_one_row(0);
 		break;
 
-	case 5:
+	case 6:
 		led_sel_row(current_row);
 		// step to next row
 		++ current_row;
@@ -469,6 +500,7 @@ static constexpr uint32_t interrupt_delay = 50;
  */
 static constexpr uint32_t max_overrun_count = 20;
 
+static int last_overrun_phase;
 
 /**
  * Timer interrupt handler
@@ -477,7 +509,8 @@ static void ICACHE_RAM_ATTR timer_handler()
 {
 	++interrupt_count;
 
-	uint32_t phase_duration = timer_duration_phase[current_phase];
+	int phase = current_phase;
+	uint32_t phase_duration = timer_duration_phase[phase];
 
 	next_tick += phase_duration;
 	timer0_write(next_tick);
@@ -485,11 +518,13 @@ static void ICACHE_RAM_ATTR timer_handler()
 	// set brightness for one row
 	led_set_brightness();
 
+	// interrupt delay overload check
 	if((int32_t)(next_tick - interrupt_delay - ESP.getCycleCount()) < 0)
 	{
 		// timer next tick will be in past ...
 		++ interrupt_overrun_count;
 		interrupt_overrun = true;
+		last_overrun_phase = phase;
 		uint32_t temp_next_tick = ESP.getCycleCount() +interrupt_delay; // adjust timing
 		timer0_write(temp_next_tick);
 		if(interrupt_overrun_count >= max_overrun_count)
@@ -524,10 +559,66 @@ static void led_init_timer()
 void led_init()
 {
 	led_init_gpio();
-	led_init_led1642();
 	led_init_spi_and_ledclock();
+	led_init_led1642();
 	led_init_timer();
 }
+
+#if 0
+
+
+#define W 80
+#define H 40
+
+static unsigned char buffer[H][W] = { {0} };
+
+static int sv[W] = {0};
+static int ssv[W] = {0};
+
+static void step()
+{
+	for(int x = 0; x < W; x++)
+	{
+		sv[x] += ssv[x];
+		if(sv[x] < 0) sv[x] = 0, ssv[x] +=4;
+		if(sv[x] > 255) sv[x] = 255, ssv[x] -=4;
+		ssv[x] += rand() %10-5;
+		buffer[H-1][x] = sv[x];
+	}
+
+
+	for(int y = 0; y < H-1; y++)
+	{
+		for(int x = 1; x < W-1; x++)
+		{
+			if(y < H-3 && buffer[y+3][x] > 50)
+			{
+				buffer[y][x] = 
+					(
+					buffer[y+2][x-1] + 
+					buffer[y+3][x  ]*6 + 
+					buffer[y+2][x+1] +
+
+					buffer[y+1][x-1] + 
+					buffer[y+2][x  ]*6 + 
+					buffer[y+1][x+1] 
+					
+					)  / 16; 
+			}
+			else
+			{
+				buffer[y][x] = 
+					(
+					buffer[y+1][x-1] + 
+					buffer[y+1][x  ]*2 + 
+					buffer[y+1][x+1] )  / 4; 
+			}
+		}
+	}
+}
+
+
+#endif
 
 void test_led_sel_row()
 {
@@ -540,7 +631,7 @@ delay(100);
 	static uint32_t next = millis() + 1000;
 	if(millis() >= next)
 	{
-		Serial.printf("%d %d\r\n", interrupt_count, interrupt_overrun?1:0);
+		Serial.printf("%d %d %d %d\r\n", interrupt_count, interrupt_overrun?1:0, last_overrun_phase, WiFi.RSSI());
 		interrupt_count = 0;
 		interrupt_overrun = false;
 		next =millis() + 1000;
