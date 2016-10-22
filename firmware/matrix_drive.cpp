@@ -564,11 +564,11 @@ void led_init()
 	led_init_timer();
 }
 
-#if 0
+
 
 
 #define W 80
-#define H 40
+#define H 32
 
 static unsigned char buffer[H][W] = { {0} };
 
@@ -618,7 +618,7 @@ static void step()
 }
 
 
-#endif
+
 
 void test_led_sel_row()
 {
@@ -627,6 +627,14 @@ void test_led_sel_row()
 delay(100);
 	led_set_brightness();
 */
+
+	step();
+
+	for(int y = 0; y < 24; y++)
+	{
+		memcpy(frame_buffer[y], buffer[y] + 10, 64);
+	}
+	delay(10);
 
 	static uint32_t next = millis() + 1000;
 	if(millis() >= next)
