@@ -5,6 +5,7 @@
 #include "../../../../.config/ssid.h"
 
 #include "matrix_drive.h"
+#include "buttons.h"
 
 
 
@@ -75,8 +76,9 @@ void test_led_sel_row();
 
 void loop() 
 {
-  test_led_sel_row();
-  server.handleClient();
+	test_led_sel_row();
+	button_update();
+	server.handleClient();
 
 }
 

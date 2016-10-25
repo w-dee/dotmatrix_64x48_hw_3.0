@@ -8,6 +8,8 @@
 #define LED_HC595_LATCH_GPIO 15
 #define LED_SER_CLOCK_GPIO 14 // 14=SCK
 
+#define BUTTON_SENS_GPIO 16
+
 #define LED_MAX_ROW 24
 #define LED_MAX_COL 64
 
@@ -39,6 +41,7 @@ static void led_init_gpio()
 	pinMode(LED_COL_LATCH_GPIO, OUTPUT);
 	pinMode(LED_HC595_LATCH_GPIO, OUTPUT);
 	pinMode(LED_SER_CLOCK_GPIO, OUTPUT);
+	pinMode(BUTTON_SENS_GPIO, INPUT);
 	digitalWrite(LED_COL_SER_GPIO, LOW);
 	digitalWrite(LED_COL_LATCH_GPIO, LOW);
 	digitalWrite(LED_HC595_LATCH_GPIO, LOW);
@@ -56,7 +59,7 @@ static void led_init_spi_and_ledclock()
 	// setup hardware SPI
 	SPI.begin();
 	SPI.setHwCs(false);
-	SPI.setFrequency(11223419);
+	SPI.setFrequency(11451419);
 	SPI1U = SPIUMOSI | SPIUSSE | SPIUFWDUAL;
 	SPI1C |= SPICFASTRD | SPICDOUT; // use DIO
 	SPI1C &= ~(SPICWBO | SPICRBO); // MSB first
@@ -252,10 +255,23 @@ static unsigned char frame_buffer[LED_MAX_ROW][LED_MAX_COL] = {
 static int current_row; //!< current scanning row
 static int current_phase; //!< current phase; 6 stage phase.
 
+uint32_t button_read; //!< read value of each button
+
+static void ICACHE_RAM_ATTR button_read_gpio()
+{
+	// update button GPIO value
+	static_assert(BUTTON_SENS_GPIO == 16, "Check the implementation");
+	uint32_t value = button_read;
+	uint32_t bit = (1U << current_row);
+	value &= ~bit;
+	if(GP16I & 0x01) value |= bit;
+	button_read = value;
+}
+
 static constexpr int max_phase = 7; //!< phase count
 	// current_phase
 	// 0:             : row commit, set LED1642 control word
-	// 1:             : led (15 14 13 12)
+	// 1:             : read buttons, increment row, led (15 14 13 12)
 	// 2:             : led (11 10  9  8)
 	// 3:             : led ( 7  6  5  4)
 	// 4:             : blank row
@@ -263,7 +279,7 @@ static constexpr int max_phase = 7; //!< phase count
 	// 6:             : set row
 
 	// the interrupt timing of each phase is like this:
-	// we try to minimize phase 4, 5, 6 duration, because
+	// we try to minimize phase 5->6 and 6->0 duration, because
 	// in these phase LED are off, long interrupt inverval
 	//  lead to dimmed display. 
 	// 0--1--------2---------3-----------4---5-----6---
@@ -361,7 +377,7 @@ static constexpr uint32_t ICACHE_RAM_ATTR config_reg_pattern_from_num(int n)
 	@param	 latch_pattern   latch pattern. this must be in form of eg.
 		byte_reverse(0b000000001010101010)
 		 when register number = 5. Every one must be in odd digit in the pettern
-		and the population count of '1' is the registernumber.
+		and the population count of '1' is the register number.
 	@param	register_pattern  register value which must be already converted by 
 		byte_reverse(bit_interleave()).
  */
@@ -394,7 +410,7 @@ static void ICACHE_RAM_ATTR led_set_led1642_reg(uint32_t latch_pattern, uint32_t
 }
 
 /**
- LED1642 configuration register word (must be already bit-interleaved by bit_interleave() )
+ LED1642 configuration register word (must be already bit-interleaved and byte-swapped by byte_reverse(bit_interleave()) )
  */
 static uint32_t led1642_configration_reg;
 
@@ -431,6 +447,7 @@ static void ICACHE_RAM_ATTR led_set_brightness()
 	{
 	case 0:
 		led_sel_row_commit();
+		// set configuration register
 		if(led1642_configration_reg_changed)
 		{
 			led_set_led1642_reg(config_reg_pattern_from_num(7),
@@ -440,6 +457,12 @@ static void ICACHE_RAM_ATTR led_set_brightness()
 		break;
 
 	case 1:
+		// read button gpio
+		button_read_gpio();
+		// step to next row
+		++ current_row;
+		if(current_row >= LED_MAX_ROW) current_row = 0;
+
 		led_set_brightness_one_row(12);
 		break;
 
@@ -462,9 +485,6 @@ static void ICACHE_RAM_ATTR led_set_brightness()
 
 	case 6:
 		led_sel_row(current_row);
-		// step to next row
-		++ current_row;
-		if(current_row >= LED_MAX_ROW) current_row = 0;
 
 		break;
 	}
@@ -550,7 +570,6 @@ static void led_init_timer()
 	timer0_isr_init();
 	timer0_attachInterrupt(timer_handler);
 	timer0_write(next_tick = ESP.getCycleCount() + timer_interval);
-
 }
 
 /**
@@ -639,12 +658,12 @@ delay(100);
 	static uint32_t next = millis() + 1000;
 	if(millis() >= next)
 	{
-		Serial.printf("%d %d %d %d\r\n", interrupt_count, interrupt_overrun?1:0, last_overrun_phase, WiFi.RSSI());
+		Serial.printf("%d %d %d %d %04x\r\n", interrupt_count, interrupt_overrun?1:0, last_overrun_phase, WiFi.RSSI(), button_read);
+
 		interrupt_count = 0;
 		interrupt_overrun = false;
 		next =millis() + 1000;
 	}
-
 }
 
 
