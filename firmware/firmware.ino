@@ -6,7 +6,7 @@
 
 #include "matrix_drive.h"
 #include "buttons.h"
-
+#include "ir_control.h"
 
 
 ESP8266WebServer server(80);
@@ -33,7 +33,7 @@ void handleNotFound(){
 void setup(void){
   Serial.begin(115200);
   Serial.print("\r\n\r\nWelcome\r\n");
-
+  ir_init();
   led_init();
 
 
@@ -80,6 +80,28 @@ void loop()
 	button_update();
 	server.handleClient();
 
+	if(buttons[BUTTON_OK])
+	{
+		buttons[BUTTON_OK] = 0;
+		ir_record();
+	}
+
+	if(buttons[BUTTON_CANCEL])
+	{
+		buttons[BUTTON_CANCEL] = 0;
+		ir_replay();
+	}
+
+
+	{
+		static ir_status_t last_ir_status = (ir_status_t)-1;
+		ir_status_t new_ir_status = ir_get_status();
+		if(new_ir_status != last_ir_status)
+		{
+			last_ir_status = new_ir_status;
+			Serial.printf("IR state : %d\r\n", (int)new_ir_status);
+		}
+	}
 }
 
 

@@ -73,15 +73,6 @@ void button_update()
 			next_button_check = now + 10; // still in past; reset next_button_check
 	}
 
-	for(int i = 0; i < 24 ; ++i)
-	{
-		if(buttons[i])
-		{
-			Serial.printf("%d ", i);
-			buttons[i] = 0;
-		}
-	}
-
 }
 
 

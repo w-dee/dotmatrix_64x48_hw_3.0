@@ -141,6 +141,17 @@ static void ICACHE_RAM_ATTR timer_record_handler()
 
 
 /**
+ * reset GPIO2 and set low
+ */
+static void ICACHE_RAM_ATTR ir_stop_gpio_output()
+{
+	constexpr int pin = 2;
+	GPF(pin) = GPFFS(GPFFS_GPIO(pin));//Set mode to GPIO
+	GPC(pin) = (GPC(pin) & (0xF << GPCI)); //SOURCE(GPIO) | DRIVER(NORMAL) | INT_TYPE(UNCHANGED) | WAKEUP_ENABLE(DISABLED)
+	GPES = (1 << pin); //Enable
+}
+
+/**
  * timer replay handler
  */
 static void ICACHE_RAM_ATTR timer_replay_handler()
@@ -174,7 +185,7 @@ static void ICACHE_RAM_ATTR timer_replay_handler()
 	{
 		// irs is not IRR_POS
 		// force stop sending 0x5b
-		PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO2_U, FUNC_GPIO2);
+		ir_stop_gpio_output();
 	}
 	ir_record_status = irs;
 }
@@ -245,7 +256,8 @@ void ir_init()
 	digitalWrite(2, LOW);
 	Serial1.begin(113960, SERIAL_7N1, SERIAL_TX_ONLY, 2);
 	U1C0 |= (1<<UCTXI); // invert TX
-	PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO2_U, FUNC_GPIO2); // serve as GPIO when not used
+	ir_stop_gpio_output();
+
 
 	/*
 	note:

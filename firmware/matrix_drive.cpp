@@ -59,7 +59,7 @@ static void led_init_spi_and_ledclock()
 	// setup hardware SPI
 	SPI.begin();
 	SPI.setHwCs(false);
-	SPI.setFrequency(11451419);
+	SPI.setFrequency((int)11451419.19);
 	SPI1U = SPIUMOSI | SPIUSSE | SPIUFWDUAL;
 	SPI1C |= SPICFASTRD | SPICDOUT; // use DIO
 	SPI1C &= ~(SPICWBO | SPICRBO); // MSB first
@@ -111,6 +111,39 @@ static void ICACHE_RAM_ATTR led_spi_set_length(int bits)
 }
 
 
+static constexpr uint32_t bit_interleave8(uint32_t v)
+{
+	// 0b0000000000000000ABCDEFGHIJKLMNOP ->
+	// 0b00000000ABCDEFGH00000000IJKLMNOP
+	return (v  | v << 8) &
+	   0b00000000111111110000000011111111u;
+}
+
+static constexpr uint32_t bit_interleave4(uint32_t v)
+{
+	// 0b00000000ABCDEFGH00000000IJKLMNOP ->
+	// 0b0000ABCD0000EFGH0000IJKL0000MNOP
+	return (v  | v << 4) &
+	   0b00001111000011110000111100001111u;
+}
+
+static constexpr uint32_t bit_interleave2(uint32_t v)
+{
+	// 0b0000ABCD0000EFGH0000IJKL0000MNOP ->
+	// 0b00AB00CD00EF00GH00IJ00KL00MN00OP
+	return (v  | v << 2) &
+	   0b00110011001100110011001100110011u;
+}
+
+static constexpr uint32_t bit_interleave1(uint32_t v)
+{
+	// 0b00AB00CD00EF00GH00IJ00KL00MN00OP
+	// 0b0A0B0C0D0E0F0G0H0I0J0K0L0M0N0O0P
+	return (v  | v << 1) &
+	   0b01010101010101010101010101010101u;
+}
+
+
 /**
  * bit interleave function
  */
@@ -120,23 +153,10 @@ static constexpr uint32_t bit_interleave(uint16_t v)
 	// This is optimization for SPI DIO, which send every even bit
 	// to the MOSI line, and every odd bit to the MISO line.
 	return
-		((uint32_t)(v & 0b0000000000000001) <<  0) |
-		((uint32_t)(v & 0b0000000000000010) <<  1) |
-		((uint32_t)(v & 0b0000000000000100) <<  2) |
-		((uint32_t)(v & 0b0000000000001000) <<  3) |
-		((uint32_t)(v & 0b0000000000010000) <<  4) |
-		((uint32_t)(v & 0b0000000000100000) <<  5) |
-		((uint32_t)(v & 0b0000000001000000) <<  6) |
-		((uint32_t)(v & 0b0000000010000000) <<  7) |
-		((uint32_t)(v & 0b0000000100000000) <<  8) |
-		((uint32_t)(v & 0b0000001000000000) <<  9) |
-		((uint32_t)(v & 0b0000010000000000) << 10) |
-		((uint32_t)(v & 0b0000100000000000) << 11) |
-		((uint32_t)(v & 0b0001000000000000) << 12) |
-		((uint32_t)(v & 0b0010000000000000) << 13) |
-		((uint32_t)(v & 0b0100000000000000) << 14) |
-		((uint32_t)(v & 0b1000000000000000) << 15) |
-		0;
+		bit_interleave1(
+		bit_interleave2(
+		bit_interleave4(
+		bit_interleave8(v))));
 }
 
 /**
@@ -301,12 +321,8 @@ static constexpr int32_t timer_duration_phase[max_phase] = //!< timer duration o
 		4000,
 		2000
 	};
-static_assert(
-	timer_duration_phase[0] + timer_duration_phase[1] +
-	timer_duration_phase[2] + timer_duration_phase[3] +
-	timer_duration_phase[4] + timer_duration_phase[5] +
-	timer_duration_phase[6] 
-		== timer_interval, "timer_interval sum mismatch");
+static constexpr int phase_sum(int index) { return index == -1 ? 0 : timer_duration_phase[index] + phase_sum(index-1); }
+static_assert(phase_sum(max_phase-1) == timer_interval, "timer_interval sum mismatch");
 
 static uint32_t next_tick;
 
@@ -646,7 +662,7 @@ void test_led_sel_row()
 delay(100);
 	led_set_brightness();
 */
-
+/*
 	step();
 
 	for(int y = 0; y < 24; y++)
@@ -654,7 +670,7 @@ delay(100);
 		memcpy(frame_buffer[y], buffer[y] + 10, 64);
 	}
 	delay(10);
-
+*/
 	static uint32_t next = millis() + 1000;
 	if(millis() >= next)
 	{
