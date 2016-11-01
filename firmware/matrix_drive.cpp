@@ -657,6 +657,7 @@ static void step()
 
 void test_led_sel_row()
 {
+	frame_buffer[0][0] = 255;
 /*
 	while(current_phase != 1) led_set_brightness();
 delay(100);

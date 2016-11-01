@@ -1,13 +1,19 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
+#include <Wire.h>
 
 #include "../../../../.config/ssid.h"
 
 #include "matrix_drive.h"
 #include "buttons.h"
 #include "ir_control.h"
+#include "bme280.h"
 
+#define WIRE_SDA 0
+#define WIRE_SCL 5
+
+BME280 bme280;
 
 ESP8266WebServer server(80);
 
@@ -35,6 +41,11 @@ void setup(void){
   Serial.print("\r\n\r\nWelcome\r\n");
   ir_init();
   led_init();
+  Wire.begin(WIRE_SDA, WIRE_SCL);
+
+
+  bme280.begin();
+  bme280.setMode(BME280_MODE_NORMAL, BME280_TSB_1000MS, BME280_OSRS_x1, BME280_OSRS_x1, BME280_OSRS_x1, BME280_FILTER_OFF);
 
 
 
@@ -92,6 +103,21 @@ void loop()
 		ir_replay();
 	}
 
+	if(buttons[BUTTON_UP])
+	{
+		buttons[BUTTON_UP] = 0;
+	  double temperature, humidity, pressure;
+	  uint8_t measuring, im_update;
+	  char s[64];
+	  bme280.getData(&temperature, &humidity, &pressure);
+	int temp = temperature * 10;
+	int hum = humidity;
+	int pre = pressure;
+	 
+	  sprintf(s, "Temperature: %d.%d C, Humidity: %d %%, Pressure: %d hPa\r\n",
+		      temp / 10, temp%10, hum, pre);
+	  Serial.print(s);
+	}
 
 	{
 		static ir_status_t last_ir_status = (ir_status_t)-1;
