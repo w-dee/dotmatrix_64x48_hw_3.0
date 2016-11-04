@@ -119,6 +119,13 @@ void loop()
 	  Serial.print(s);
 	}
 
+	if(buttons[BUTTON_DOWN])
+	{
+		buttons[BUTTON_DOWN] = 0;
+		int n = analogRead(0);
+		Serial.printf("ambient : %d\r\n", n);
+	}
+
 	{
 		static ir_status_t last_ir_status = (ir_status_t)-1;
 		ir_status_t new_ir_status = ir_get_status();
