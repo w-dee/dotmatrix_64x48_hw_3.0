@@ -904,9 +904,9 @@ Text GLabel 6400 1900 0    60   Input ~ 0
 E_COLSER
 Text GLabel 6400 1800 0    60   Input ~ 0
 E_HC595LATCH
-Text GLabel 4400 1700 2    60   Input ~ 0
-E_SDA
 Text GLabel 2000 2000 0    60   Input ~ 0
+E_SDA
+Text GLabel 4400 1700 2    60   Input ~ 0
 E_SCL
 $Comp
 L R R7
