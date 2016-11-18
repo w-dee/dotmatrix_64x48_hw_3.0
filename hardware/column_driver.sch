@@ -32,7 +32,7 @@ LIBS:DeeComponents
 LIBS:bb-ch340t
 LIBS:wroom-02
 LIBS:dotmatrix_64x48-cache
-EELAYER 25 0
+EELAYER 26 0
 EELAYER END
 $Descr A4 11693 8268
 encoding utf-8
