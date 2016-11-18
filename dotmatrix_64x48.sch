@@ -32,7 +32,7 @@ LIBS:DeeComponents
 LIBS:bb-ch340t
 LIBS:wroom-02
 LIBS:dotmatrix_64x48-cache
-EELAYER 25 0
+EELAYER 26 0
 EELAYER END
 $Descr A4 11693 8268
 encoding utf-8
@@ -276,17 +276,6 @@ F 2 "Resistors_SMD:R_1812_HandSoldering" H 2900 5350 50  0001 C CNN
 F 3 "" H 2900 5350 50  0000 C CNN
 	1    2900 5350
 	1    0    0    -1  
-$EndComp
-$Comp
-L CONN_01X03 P4
-U 1 1 57AA2BE7
-P 5700 3350
-F 0 "P4" H 5618 3025 50  0000 C CNN
-F 1 "CONN_01X03" H 5618 3116 50  0000 C CNN
-F 2 "Pin_Headers:Pin_Header_Straight_1x03" H 5777 3254 50  0001 L CNN
-F 3 "" H 5700 3350 50  0000 C CNN
-	1    5700 3350
-	1    0    0    1   
 $EndComp
 $Comp
 L GND #PWR08
@@ -2149,4 +2138,19 @@ $EndComp
 Wire Wire Line
 	7050 850  7050 900 
 Connection ~ 7400 550 
+$Comp
+L CONN_01X04 P1
+U 1 1 582ED483
+P 5700 3300
+F 0 "P1" H 5778 3341 50  0000 L CNN
+F 1 "CONN_01X04" H 5778 3250 50  0000 L CNN
+F 2 "Pin_Headers:Pin_Header_Straight_1x04" H 5777 3204 50  0001 L CNN
+F 3 "" H 5700 3300 50  0000 C CNN
+	1    5700 3300
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5500 3150 5100 3150
+Text GLabel 5100 3150 0    60   Input ~ 0
+ESPVDD
 $EndSCHEMATC
