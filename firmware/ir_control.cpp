@@ -7,7 +7,7 @@
 
 
 
-static constexpr size_t buffer_size = 1024; //!< buffer size in nibble
+static constexpr size_t buffer_size = 1024; //!< buffer size
 static uint8_t buffer_array[buffer_size]; //!< buffer array
 static size_t buffer_index; //!< array read/write index
 
@@ -269,8 +269,8 @@ void ir_init()
 		inverting this makes it as:
 		 --> HLLHLLHLLHLLHLLHLLHLLHLLHLLHLLHLLHLL...
 
-		the baud rate is 113960, so the output frequency is:
-		113960 / 3 = 37.986 kHz
+		the baud rate is 113960.11, so the output frequency is:
+		113960.11 / 3 = 37.987 kHz
 	*/
 	pinMode(IR_SENS_GPIO, INPUT);
 
