@@ -32,7 +32,7 @@ LIBS:DeeComponents
 LIBS:bb-ch340t
 LIBS:wroom-02
 LIBS:dotmatrix_64x48-cache
-EELAYER 26 0
+EELAYER 25 0
 EELAYER END
 $Descr A4 11693 8268
 encoding utf-8
@@ -2232,7 +2232,7 @@ U 1 1 58371501
 P 6750 5250
 F 0 "L2" V 6572 5250 50  0000 C CNN
 F 1 "4.9uH" V 6663 5250 50  0000 C CNN
-F 2 "Choke_SMD:Choke_SMD_10.4x10.4_H4.8" H 6750 5250 50  0001 C CNN
+F 2 "components:Choke_SMD_10.4x10.4_H4.8_HandSoldering" H 6750 5250 50  0001 C CNN
 F 3 "" H 6750 5250 50  0000 C CNN
 	1    6750 5250
 	0    -1   1    0   
