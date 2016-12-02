@@ -338,45 +338,45 @@ $EndComp
 $Comp
 L GND #PWR010
 U 1 1 57AD797C
-P 6250 5900
-F 0 "#PWR010" H 6250 5650 50  0001 C CNN
-F 1 "GND" H 6250 5750 50  0000 C CNN
-F 2 "" H 6250 5900 50  0000 C CNN
-F 3 "" H 6250 5900 50  0000 C CNN
-	1    6250 5900
+P 6100 5900
+F 0 "#PWR010" H 6100 5650 50  0001 C CNN
+F 1 "GND" H 6100 5750 50  0000 C CNN
+F 2 "" H 6100 5900 50  0000 C CNN
+F 3 "" H 6100 5900 50  0000 C CNN
+	1    6100 5900
 	-1   0    0    -1  
 $EndComp
 $Comp
 L CP C21
 U 1 1 57AD7982
-P 6250 5750
-F 0 "C21" H 6250 5300 50  0000 L CNN
-F 1 "100u" H 6200 5200 50  0000 L CNN
-F 2 "components:C_Radial_D6.3_L11.2_P2.5_hand_soldering" H 6368 5659 50  0001 L CNN
-F 3 "" H 6250 5750 50  0000 C CNN
-	1    6250 5750
+P 6100 5750
+F 0 "C21" H 6100 5300 50  0000 L CNN
+F 1 "100u" H 6050 5200 50  0000 L CNN
+F 2 "components:C_Radial_D6.3_L11.2_P2.5_hand_soldering" H 6218 5659 50  0001 L CNN
+F 3 "" H 6100 5750 50  0000 C CNN
+	1    6100 5750
 	-1   0    0    -1  
 $EndComp
 $Comp
 L GND #PWR011
 U 1 1 57AD7A38
-P 6450 5950
-F 0 "#PWR011" H 6450 5700 50  0001 C CNN
-F 1 "GND" H 6450 5800 50  0000 C CNN
-F 2 "" H 6450 5950 50  0000 C CNN
-F 3 "" H 6450 5950 50  0000 C CNN
-	1    6450 5950
+P 6300 5950
+F 0 "#PWR011" H 6300 5700 50  0001 C CNN
+F 1 "GND" H 6300 5800 50  0000 C CNN
+F 2 "" H 6300 5950 50  0000 C CNN
+F 3 "" H 6300 5950 50  0000 C CNN
+	1    6300 5950
 	-1   0    0    -1  
 $EndComp
 $Comp
 L C C22
 U 1 1 57AD7A3F
-P 6450 5750
-F 0 "C22" H 6400 5300 50  0000 L CNN
-F 1 "1u" H 6400 5200 50  0000 L CNN
-F 2 "Capacitors_SMD:C_0603_HandSoldering" H 6565 5659 50  0001 L CNN
-F 3 "" H 6450 5750 50  0000 C CNN
-	1    6450 5750
+P 6300 5750
+F 0 "C22" H 6250 5300 50  0000 L CNN
+F 1 "1u" H 6250 5200 50  0000 L CNN
+F 2 "Capacitors_SMD:C_0603_HandSoldering" H 6415 5659 50  0001 L CNN
+F 3 "" H 6300 5750 50  0000 C CNN
+	1    6300 5750
 	1    0    0    -1  
 $EndComp
 $Comp
@@ -952,8 +952,6 @@ U 57BB11DB
 F0 "IR_Sensor" 60
 F1 "IR_Sensor.sch" 60
 $EndSheet
-Text GLabel 5300 750  2    60   Input ~ 0
-ESPVDD
 Text GLabel 2600 700  0    60   Input ~ 0
 ESPVDD
 Text GLabel 850  600  0    60   Input ~ 0
@@ -1099,7 +1097,7 @@ F 3 "" H 10850 5750 50  0000 C CNN
 	1    10850 5750
 	-1   0    0    -1  
 $EndComp
-Text GLabel 7200 5250 2    60   Input ~ 0
+Text GLabel 4750 4750 2    60   Input ~ 0
 LEDVDD
 $Comp
 L R R12
@@ -1583,7 +1581,7 @@ Wire Wire Line
 	1150 5250 1600 5250
 Connection ~ 1450 5250
 Wire Wire Line
-	3150 4750 3950 4750
+	3150 4750 4000 4750
 Connection ~ 9300 5600
 Connection ~ 9450 1200
 Wire Wire Line
@@ -1600,9 +1598,7 @@ Wire Wire Line
 	9550 5950 9550 5900
 Connection ~ 9950 5600
 Wire Wire Line
-	6450 5950 6450 5900
-Connection ~ 6250 5600
-Connection ~ 6450 5600
+	6300 5950 6300 5900
 Wire Wire Line
 	9000 5600 11150 5600
 Wire Wire Line
@@ -1674,7 +1670,7 @@ Wire Wire Line
 Wire Wire Line
 	4400 1300 5050 1300
 Wire Wire Line
-	5300 800  5300 750 
+	5300 600  5300 800 
 Wire Wire Line
 	2550 1500 3200 1500
 Wire Wire Line
@@ -1697,7 +1693,7 @@ Connection ~ 3150 1800
 Wire Wire Line
 	3050 1900 3050 1050
 Wire Wire Line
-	2900 650  2900 750 
+	2900 600  2900 750 
 Wire Wire Line
 	3150 600  3150 1300
 Wire Wire Line
@@ -1711,7 +1707,6 @@ Wire Wire Line
 Connection ~ 3000 2000
 Wire Wire Line
 	2750 750  2750 650 
-Connection ~ 2900 650 
 Wire Wire Line
 	2000 2000 3200 2000
 Wire Wire Line
@@ -1810,8 +1805,6 @@ Wire Wire Line
 Connection ~ 5050 2950
 Connection ~ 10550 5600
 Connection ~ 10750 5600
-Wire Wire Line
-	5950 5250 6450 5250
 Wire Wire Line
 	5950 5150 5950 5600
 Wire Wire Line
@@ -1935,8 +1928,6 @@ Wire Wire Line
 Connection ~ 1500 6400
 Wire Wire Line
 	9900 1400 9550 1400
-Wire Wire Line
-	5950 5600 6550 5600
 Wire Wire Line
 	7050 850  7050 900 
 Connection ~ 7400 550 
@@ -2099,34 +2090,34 @@ Connection ~ 9700 2100
 $Comp
 L Led_Small D8
 U 1 1 5833CEC7
-P 11150 5700
-F 0 "D8" V 11196 5632 50  0000 R CNN
-F 1 "Led_Small" V 11105 5632 50  0000 R CNN
-F 2 "components:LED1608_Handsoldering" V 11150 5700 50  0001 C CNN
-F 3 "" V 11150 5700 50  0000 C CNN
-	1    11150 5700
+P 2050 700
+F 0 "D8" V 2096 632 50  0000 R CNN
+F 1 "Led_Small" V 2005 632 50  0000 R CNN
+F 2 "components:LED1608_Handsoldering" V 2050 700 50  0001 C CNN
+F 3 "" V 2050 700 50  0000 C CNN
+	1    2050 700 
 	0    -1   -1   0   
 $EndComp
 $Comp
 L R R122
 U 1 1 5833CECD
-P 11150 5950
-F 0 "R122" V 11150 5900 50  0000 L CNN
-F 1 "1k" V 11250 5850 50  0000 L CNN
-F 2 "Resistors_SMD:R_0603_HandSoldering" V 11080 5950 50  0001 C CNN
-F 3 "" H 11150 5950 50  0000 C CNN
-	1    11150 5950
+P 2050 950
+F 0 "R122" V 2050 900 50  0000 L CNN
+F 1 "1k" V 2150 850 50  0000 L CNN
+F 2 "Resistors_SMD:R_0603_HandSoldering" V 1980 950 50  0001 C CNN
+F 3 "" H 2050 950 50  0000 C CNN
+	1    2050 950 
 	-1   0    0    1   
 $EndComp
 $Comp
 L GND #PWR043
 U 1 1 5833CED3
-P 11150 6100
-F 0 "#PWR043" H 11150 5850 50  0001 C CNN
-F 1 "GND" H 11155 5927 50  0000 C CNN
-F 2 "" H 11150 6100 50  0000 C CNN
-F 3 "" H 11150 6100 50  0000 C CNN
-	1    11150 6100
+P 2050 1100
+F 0 "#PWR043" H 2050 850 50  0001 C CNN
+F 1 "GND" H 2055 927 50  0000 C CNN
+F 2 "" H 2050 1100 50  0000 C CNN
+F 3 "" H 2050 1100 50  0000 C CNN
+	1    2050 1100
 	1    0    0    -1  
 $EndComp
 Connection ~ 10850 5600
@@ -2183,17 +2174,16 @@ Connection ~ 3500 4750
 $Comp
 L INDUCTOR L2
 U 1 1 58371501
-P 6750 5250
-F 0 "L2" V 6572 5250 50  0000 C CNN
-F 1 "4.9uH" V 6663 5250 50  0000 C CNN
-F 2 "components:Choke_SMD_10.4x10.4_H4.8_HandSoldering" H 6750 5250 50  0001 C CNN
-F 3 "" H 6750 5250 50  0000 C CNN
-	1    6750 5250
+P 4300 4750
+F 0 "L2" V 4122 4750 50  0000 C CNN
+F 1 "4.9uH" V 4213 4750 50  0000 C CNN
+F 2 "components:Choke_SMD_10.4x10.4_H4.8_HandSoldering" H 4300 4750 50  0001 C CNN
+F 3 "" H 4300 4750 50  0000 C CNN
+	1    4300 4750
 	0    -1   1    0   
 $EndComp
 Wire Wire Line
-	7050 5250 7200 5250
-Connection ~ 5950 5250
+	4600 4750 4750 4750
 $Comp
 L GND #PWR046
 U 1 1 5837D4C6
@@ -2252,7 +2242,7 @@ Connection ~ 1850 700
 Wire Wire Line
 	1850 700  1850 600 
 Wire Wire Line
-	1600 600  3150 600 
+	1600 600  5300 600 
 $Comp
 L Jumper_NO_Small JP7
 U 1 1 583D58CC
@@ -2426,4 +2416,14 @@ Wire Wire Line
 Connection ~ 7350 2750
 Text Notes 6150 2850 0    60   ~ 0
 shield line end check\npoint for PWCLK
+Connection ~ 6100 5600
+Connection ~ 6300 5600
+Wire Wire Line
+	5950 5600 6550 5600
+Connection ~ 3950 4750
+Connection ~ 2900 600 
+Connection ~ 3150 600 
+Connection ~ 2050 600 
+Text Label 3300 600  0    60   ~ 0
+FILTVDD
 $EndSCHEMATC
