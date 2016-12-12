@@ -1,0 +1,335 @@
+EESchema Schematic File Version 2
+LIBS:power
+LIBS:device
+LIBS:transistors
+LIBS:conn
+LIBS:linear
+LIBS:regul
+LIBS:74xx
+LIBS:cmos4000
+LIBS:adc-dac
+LIBS:memory
+LIBS:xilinx
+LIBS:microcontrollers
+LIBS:dsp
+LIBS:microchip
+LIBS:analog_switches
+LIBS:motorola
+LIBS:texas
+LIBS:intel
+LIBS:audio
+LIBS:interface
+LIBS:digital-audio
+LIBS:philips
+LIBS:display
+LIBS:cypress
+LIBS:siliconi
+LIBS:opto
+LIBS:atmel
+LIBS:contrib
+LIBS:valves
+LIBS:DeeComponents
+LIBS:bb-ch340t
+LIBS:wroom-02
+LIBS:dotmatrix_64x48-cache
+EELAYER 26 0
+EELAYER END
+$Descr A4 11693 8268
+encoding utf-8
+Sheet 9 9
+Title ""
+Date ""
+Rev ""
+Comp ""
+Comment1 ""
+Comment2 ""
+Comment3 ""
+Comment4 ""
+$EndDescr
+$Comp
+L USB_OTG CONN2
+U 1 1 584C8CCD
+P 2150 3800
+F 0 "CONN2" V 2273 3988 50  0000 L CNN
+F 1 "USB_OTG" V 2182 3988 50  0000 L CNN
+F 2 "components:USB-MICRO-B-RECEPT-UNIVERSAL" V 2136 3988 50  0001 L CNN
+F 3 "" V 2100 3700 50  0000 C CNN
+	1    2150 3800
+	0    -1   -1   0   
+$EndComp
+Text GLabel 3900 3800 0    60   Input ~ 0
+USB_D_P
+Text GLabel 3900 3900 0    60   Input ~ 0
+USB_D_N
+$Comp
+L C C30
+U 1 1 584C8CFB
+P 4050 3100
+F 0 "C30" H 4165 3146 50  0000 L CNN
+F 1 "0.1u" H 4165 3055 50  0000 L CNN
+F 2 "Capacitors_SMD:C_0603_HandSoldering" H 4165 3009 50  0001 L CNN
+F 3 "" H 4050 3100 50  0000 C CNN
+	1    4050 3100
+	1    0    0    -1  
+$EndComp
+NoConn ~ 2450 3700
+Wire Wire Line
+	2050 3400 3600 3400
+Wire Wire Line
+	4050 2900 4050 2950
+Connection ~ 4400 2900
+Wire Wire Line
+	4400 2950 4400 2900
+Wire Wire Line
+	4050 2900 5100 2900
+Wire Wire Line
+	3850 3350 5100 3350
+Wire Wire Line
+	4400 3250 4400 3350
+Wire Wire Line
+	4050 3250 4050 3350
+Wire Wire Line
+	2500 3600 2450 3600
+Wire Wire Line
+	2750 4000 2450 4000
+Wire Wire Line
+	2500 3400 2500 3600
+Connection ~ 2500 3400
+Wire Wire Line
+	6150 4050 7000 4050
+Wire Wire Line
+	6150 3950 6900 3950
+Wire Wire Line
+	6150 4150 6500 4150
+Wire Wire Line
+	6350 3750 6150 3750
+Wire Wire Line
+	5100 3850 4450 3850
+Wire Wire Line
+	4450 3850 4450 3900
+Wire Wire Line
+	4450 3900 2450 3900
+Wire Wire Line
+	2450 3800 4400 3800
+Wire Wire Line
+	4400 3800 4400 3750
+Wire Wire Line
+	4400 3750 5100 3750
+Wire Wire Line
+	5100 3600 3150 3600
+Wire Wire Line
+	3150 3600 3150 3700
+Wire Wire Line
+	3150 3700 2750 3700
+Wire Wire Line
+	4950 2750 5100 2750
+Wire Wire Line
+	4750 3200 5100 3200
+$Comp
+L R R53
+U 1 1 584C8D46
+P 6250 2500
+F 0 "R53" V 6250 2400 50  0000 L CNN
+F 1 "10k" V 6200 2600 50  0000 L CNN
+F 2 "Resistors_SMD:R_0603_HandSoldering" V 6180 2500 50  0001 C CNN
+F 3 "" H 6250 2500 50  0000 C CNN
+	1    6250 2500
+	1    0    0    1   
+$EndComp
+Wire Wire Line
+	6250 2300 6250 2350
+Wire Wire Line
+	6250 2650 6250 2750
+Wire Wire Line
+	6250 2750 6150 2750
+Wire Wire Line
+	4950 2300 7150 2300
+NoConn ~ 5100 4100
+NoConn ~ 6150 4250
+NoConn ~ 6150 3850
+NoConn ~ 6150 3650
+NoConn ~ 6150 3550
+NoConn ~ 6150 3400
+NoConn ~ 6150 3300
+NoConn ~ 6150 3200
+NoConn ~ 6150 3100
+NoConn ~ 6150 2950
+NoConn ~ 6150 2850
+Connection ~ 4400 3350
+Wire Wire Line
+	4750 3200 4750 3600
+Connection ~ 4750 3600
+Wire Wire Line
+	4950 2300 4950 2900
+Connection ~ 4950 2900
+Connection ~ 4950 2750
+$Comp
+L C C60
+U 1 1 584C8CEE
+P 4400 3100
+F 0 "C60" H 4515 3146 50  0000 L CNN
+F 1 "1u" H 4515 3055 50  0000 L CNN
+F 2 "Capacitors_SMD:C_0603_HandSoldering" H 4515 3009 50  0001 L CNN
+F 3 "" H 4400 3100 50  0000 C CNN
+	1    4400 3100
+	1    0    0    -1  
+$EndComp
+$Comp
+L C C28
+U 1 1 584CA50A
+P 3750 3450
+F 0 "C28" H 3865 3496 50  0000 L CNN
+F 1 "1u" H 3865 3405 50  0000 L CNN
+F 2 "Capacitors_SMD:C_0603_HandSoldering" H 3865 3359 50  0001 L CNN
+F 3 "" H 3750 3450 50  0000 C CNN
+	1    3750 3450
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3850 3300 3850 3350
+Wire Wire Line
+	3600 3300 3850 3300
+Connection ~ 4050 3350
+Connection ~ 3750 3600
+Wire Wire Line
+	2750 3700 2750 4000
+Wire Wire Line
+	3600 3400 3600 3300
+Connection ~ 3750 3300
+$Comp
+L CP2104 U16
+U 1 1 584C8D2C
+P 5300 2700
+F 0 "U16" H 5625 2937 60  0000 C CNN
+F 1 "CP2104" H 5625 2831 60  0000 C CNN
+F 2 "components:QFN-24-1EP_4x4mm_Pitch0.5mm-handsoldering" H 5300 2700 60  0001 C CNN
+F 3 "" H 5300 2700 60  0001 C CNN
+	1    5300 2700
+	1    0    0    -1  
+$EndComp
+Connection ~ 4550 3350
+Wire Wire Line
+	4550 3350 4550 4250
+Wire Wire Line
+	4550 4250 5100 4250
+$Comp
+L CONN_01X06 P1
+U 1 1 584CCEBC
+P 7350 3350
+F 0 "P1" H 7427 3436 50  0000 L CNN
+F 1 "CONN_01X06" H 7427 3345 50  0000 L CNN
+F 2 "Pin_Headers:Pin_Header_Straight_1x06" H 7427 3254 50  0000 L CNN
+F 3 "" H 7350 3350 50  0000 C CNN
+	1    7350 3350
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	7150 2300 7150 3100
+Connection ~ 6250 2300
+Wire Wire Line
+	7150 3200 6750 3200
+Wire Wire Line
+	6900 3950 6900 3300
+Wire Wire Line
+	6900 3300 7150 3300
+Wire Wire Line
+	7000 4050 7000 3400
+Wire Wire Line
+	7000 3400 7150 3400
+Wire Wire Line
+	7150 3500 6350 3500
+Wire Wire Line
+	6350 3500 6350 3750
+Wire Wire Line
+	6500 4150 6500 3600
+Wire Wire Line
+	6500 3600 7150 3600
+$Comp
+L GND #PWR0127
+U 1 1 584E0827
+P 2650 3400
+F 0 "#PWR0127" H 2650 3150 50  0001 C CNN
+F 1 "GND" H 2650 3250 50  0000 C CNN
+F 2 "" H 2650 3400 50  0000 C CNN
+F 3 "" H 2650 3400 50  0000 C CNN
+	1    2650 3400
+	-1   0    0    -1  
+$EndComp
+$Comp
+L GND #PWR0128
+U 1 1 584E086C
+P 6750 3200
+F 0 "#PWR0128" H 6750 2950 50  0001 C CNN
+F 1 "GND" H 6750 3050 50  0000 C CNN
+F 2 "" H 6750 3200 50  0000 C CNN
+F 3 "" H 6750 3200 50  0000 C CNN
+	1    6750 3200
+	-1   0    0    -1  
+$EndComp
+Connection ~ 2650 3400
+Wire Wire Line
+	4650 3250 4650 3350
+$Comp
+L C C73
+U 1 1 584E0C6E
+P 4650 3100
+F 0 "C73" H 4765 3146 50  0000 L CNN
+F 1 "1u" H 4765 3055 50  0000 L CNN
+F 2 "Capacitors_SMD:C_0603_HandSoldering" H 4765 3009 50  0001 L CNN
+F 3 "" H 4650 3100 50  0000 C CNN
+	1    4650 3100
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	4650 2950 4650 2900
+Connection ~ 4650 2900
+Connection ~ 4650 3350
+Text Label 6450 3500 0    60   ~ 0
+USBDTR
+Text Label 6500 3600 0    60   ~ 0
+USBRTS
+Text Label 6550 3950 0    60   ~ 0
+USBTXD
+Text Label 6550 4050 0    60   ~ 0
+USBRXD
+Text Label 3300 3600 0    60   ~ 0
+VBUS
+Text Label 6450 2300 0    60   ~ 0
+USB3V3VDD
+$Comp
+L Led_Small D9
+U 1 1 584E6A14
+P 2600 4550
+F 0 "D9" V 2646 4482 50  0000 R CNN
+F 1 "Led_Small" V 2555 4482 50  0000 R CNN
+F 2 "components:LED1608_Handsoldering" V 2600 4550 50  0001 C CNN
+F 3 "" V 2600 4550 50  0000 C CNN
+	1    2600 4550
+	0    -1   -1   0   
+$EndComp
+$Comp
+L R R125
+U 1 1 584E6A1B
+P 2600 4150
+F 0 "R125" V 2600 4100 50  0000 L CNN
+F 1 "1k" V 2700 4050 50  0000 L CNN
+F 2 "Resistors_SMD:R_0603_HandSoldering" V 2530 4150 50  0001 C CNN
+F 3 "" H 2600 4150 50  0000 C CNN
+	1    2600 4150
+	-1   0    0    1   
+$EndComp
+$Comp
+L GND #PWR0129
+U 1 1 584E6A22
+P 2600 4650
+F 0 "#PWR0129" H 2600 4400 50  0001 C CNN
+F 1 "GND" H 2605 4477 50  0000 C CNN
+F 2 "" H 2600 4650 50  0000 C CNN
+F 3 "" H 2600 4650 50  0000 C CNN
+	1    2600 4650
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	2600 4300 2600 4450
+Connection ~ 2600 4000
+$EndSCHEMATC
