@@ -26,5 +26,6 @@ fp-lib-table
 
 *-cache.lib
 
-gerber/
+hardware/gerber/pass*
+hardware/gerber/*.zip
 
