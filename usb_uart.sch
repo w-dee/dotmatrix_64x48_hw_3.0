@@ -8,29 +8,44 @@ LIBS:regul
 LIBS:74xx
 LIBS:cmos4000
 LIBS:adc-dac
-LIBS:memory
-LIBS:xilinx
-LIBS:microcontrollers
 LIBS:dsp
-LIBS:microchip
 LIBS:analog_switches
-LIBS:motorola
-LIBS:texas
-LIBS:intel
 LIBS:audio
 LIBS:interface
-LIBS:digital-audio
-LIBS:philips
 LIBS:display
-LIBS:cypress
 LIBS:siliconi
 LIBS:opto
-LIBS:atmel
 LIBS:contrib
 LIBS:valves
 LIBS:DeeComponents
 LIBS:bb-ch340t
 LIBS:wroom-02
+LIBS:actel
+LIBS:silabs
+LIBS:ac-dc
+LIBS:ir
+LIBS:74xgxx
+LIBS:Zilog
+LIBS:dc-dc
+LIBS:references
+LIBS:cmos_ieee
+LIBS:sensors
+LIBS:bbd
+LIBS:bosch
+LIBS:zetex
+LIBS:hc11
+LIBS:ESD_Protection
+LIBS:Oscillators
+LIBS:allegro
+LIBS:switches
+LIBS:pspice
+LIBS:transf
+LIBS:logo
+LIBS:relays
+LIBS:ttl_ieee
+LIBS:diode
+LIBS:wiznet
+LIBS:mechanical
 LIBS:dotmatrix_64x48-cache
 EELAYER 26 0
 EELAYER END
@@ -50,12 +65,14 @@ $Comp
 L USB_OTG CONN2
 U 1 1 584C8CCD
 P 2150 3800
-F 0 "CONN2" V 2273 3988 50  0000 L CNN
-F 1 "USB_OTG" V 2182 3988 50  0000 L CNN
+AR Path="/584C83E3/584C8CCD" Ref="CONN2"  Part="1" 
+AR Path="/584C8CCD" Ref="CONN2"  Part="1" 
+F 0 "CONN2" V 1900 3900 50  0000 L CNN
+F 1 "USB_OTG" V 1800 3850 50  0000 L CNN
 F 2 "components:USB-MICRO-B-RECEPT-UNIVERSAL" V 2136 3988 50  0001 L CNN
 F 3 "" V 2100 3700 50  0000 C CNN
 	1    2150 3800
-	0    -1   -1   0   
+	1    0    0    -1  
 $EndComp
 Text GLabel 4400 3800 0    60   Input ~ 0
 USB_D_P
@@ -72,22 +89,11 @@ F 3 "" H 4000 3100 50  0000 C CNN
 	1    4000 3100
 	1    0    0    -1  
 $EndComp
-NoConn ~ 2450 3700
 Connection ~ 4400 2900
 Wire Wire Line
 	4400 2950 4400 2900
 Wire Wire Line
-	3750 2900 5100 2900
-Wire Wire Line
-	2050 3350 5100 3350
-Wire Wire Line
 	4400 3250 4400 3350
-Wire Wire Line
-	2500 3600 2450 3600
-Wire Wire Line
-	2750 4000 2450 4000
-Wire Wire Line
-	2500 3350 2500 3600
 Wire Wire Line
 	6150 4050 7000 4050
 Wire Wire Line
@@ -109,7 +115,7 @@ Wire Wire Line
 Wire Wire Line
 	4400 3750 5100 3750
 Wire Wire Line
-	2750 3700 4200 3700
+	2550 3700 4200 3700
 Wire Wire Line
 	4950 2750 5100 2750
 Wire Wire Line
@@ -173,8 +179,6 @@ F 3 "" H 3450 3550 50  0000 C CNN
 	1    3450 3550
 	1    0    0    -1  
 $EndComp
-Wire Wire Line
-	2750 3700 2750 4000
 $Comp
 L CP2104 U16
 U 1 1 584C8D2C
@@ -192,20 +196,20 @@ Wire Wire Line
 Wire Wire Line
 	4550 4250 5100 4250
 $Comp
-L CONN_01X06 P1
+L CONN_01X08 P1
 U 1 1 584CCEBC
-P 7350 3350
-F 0 "P1" H 7427 3436 50  0000 L CNN
-F 1 "CONN_01X06" H 7427 3345 50  0000 L CNN
-F 2 "Pin_Headers:Pin_Header_Straight_1x06" H 7427 3254 50  0000 L CNN
-F 3 "" H 7350 3350 50  0000 C CNN
-	1    7350 3350
+P 7350 3450
+F 0 "P1" H 7427 3536 50  0000 L CNN
+F 1 "CONN_01X08" H 7427 3445 50  0000 L CNN
+F 2 "Pin_Headers:Pin_Header_Straight_1x08_Pitch2.54mm" H 7427 3354 50  0000 L CNN
+F 3 "" H 7350 3450 50  0000 C CNN
+	1    7350 3450
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
 	7150 2300 7150 3100
 Wire Wire Line
-	7150 3200 6750 3200
+	6300 3200 7150 3200
 Wire Wire Line
 	6900 3950 6900 3300
 Wire Wire Line
@@ -222,28 +226,6 @@ Wire Wire Line
 	6500 4150 6500 3600
 Wire Wire Line
 	6500 3600 7150 3600
-$Comp
-L GND #PWR129
-U 1 1 584E0827
-P 2650 3400
-F 0 "#PWR129" H 2650 3150 50  0001 C CNN
-F 1 "GND" H 2650 3250 50  0000 C CNN
-F 2 "" H 2650 3400 50  0000 C CNN
-F 3 "" H 2650 3400 50  0000 C CNN
-	1    2650 3400
-	-1   0    0    -1  
-$EndComp
-$Comp
-L GND #PWR131
-U 1 1 584E086C
-P 6750 3200
-F 0 "#PWR131" H 6750 2950 50  0001 C CNN
-F 1 "GND" H 6750 3050 50  0000 C CNN
-F 2 "" H 6750 3200 50  0000 C CNN
-F 3 "" H 6750 3200 50  0000 C CNN
-	1    6750 3200
-	-1   0    0    -1  
-$EndComp
 Wire Wire Line
 	4650 3250 4650 3350
 $Comp
@@ -269,45 +251,34 @@ Text Label 6550 3950 0    60   ~ 0
 USBTXD
 Text Label 6550 4050 0    60   ~ 0
 USBRXD
-Text Label 2450 4000 0    60   ~ 0
+Text Label 3750 3700 0    60   ~ 0
 VBUS
 Text Label 6450 2300 0    60   ~ 0
 USB3V3VDD
 $Comp
-L Led_Small D9
+L LED_Small D9
 U 1 1 584E6A14
-P 3200 2900
-F 0 "D9" V 3246 2832 50  0000 R CNN
-F 1 "Led_Small" V 3155 2832 50  0000 R CNN
-F 2 "components:LED1608_Handsoldering" V 3200 2900 50  0001 C CNN
-F 3 "" V 3200 2900 50  0000 C CNN
-	1    3200 2900
-	1    0    0    -1  
+P 6700 2850
+F 0 "D9" V 6746 2782 50  0000 R CNN
+F 1 "Led_Small" V 6655 2782 50  0000 R CNN
+F 2 "components:LED1608_Handsoldering" V 6700 2850 50  0001 C CNN
+F 3 "" V 6700 2850 50  0000 C CNN
+	1    6700 2850
+	-1   0    0    -1  
 $EndComp
 $Comp
 L R R125
 U 1 1 584E6A1B
-P 3600 2900
-F 0 "R125" V 3600 2850 50  0000 L CNN
-F 1 "1k" V 3700 2800 50  0000 L CNN
-F 2 "Resistors_SMD:R_0603_HandSoldering" V 3530 2900 50  0001 C CNN
-F 3 "" H 3600 2900 50  0000 C CNN
-	1    3600 2900
-	0    -1   -1   0   
-$EndComp
-$Comp
-L GND #PWR130
-U 1 1 584E6A22
-P 3100 2900
-F 0 "#PWR130" H 3100 2650 50  0001 C CNN
-F 1 "GND" H 3105 2727 50  0000 C CNN
-F 2 "" H 3100 2900 50  0000 C CNN
-F 3 "" H 3100 2900 50  0000 C CNN
-	1    3100 2900
-	0    1    1    0   
+P 6300 2850
+F 0 "R125" V 6300 2750 50  0000 L CNN
+F 1 "1k" V 6400 2900 50  0000 L CNN
+F 2 "Resistors_SMD:R_0603_HandSoldering" V 6230 2850 50  0001 C CNN
+F 3 "" H 6300 2850 50  0000 C CNN
+	1    6300 2850
+	0    1    -1   0   
 $EndComp
 Wire Wire Line
-	3450 2900 3300 2900
+	6450 2850 6600 2850
 Wire Wire Line
 	5100 3600 4200 3600
 Wire Wire Line
@@ -357,12 +328,6 @@ F 3 "" H 3650 3550 50  0000 C CNN
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	2050 3350 2050 3400
-Connection ~ 2500 3350
-Wire Wire Line
-	2650 3400 2650 3350
-Connection ~ 2650 3350
-Wire Wire Line
 	2850 3400 2850 3350
 Connection ~ 2850 3350
 Wire Wire Line
@@ -407,5 +372,42 @@ Wire Wire Line
 Connection ~ 4000 3350
 Text Label 6250 2100 0    60   ~ 0
 VBUS
-NoConn ~ 6150 2850
+Wire Wire Line
+	2450 3600 2550 3600
+Wire Wire Line
+	2550 3600 2550 3700
+Wire Wire Line
+	5100 3350 1700 3350
+Wire Wire Line
+	1700 3350 1700 4300
+Wire Wire Line
+	1700 4300 2600 4300
+Wire Wire Line
+	2050 4300 2050 4200
+Wire Wire Line
+	2150 4300 2150 4200
+Connection ~ 2050 4300
+NoConn ~ 2450 4000
+Wire Wire Line
+	7150 3700 7100 3700
+Wire Wire Line
+	7100 3700 7100 3800
+Wire Wire Line
+	7100 3800 7150 3800
+Wire Wire Line
+	6300 3200 6300 4500
+Wire Wire Line
+	6300 4500 2600 4500
+Wire Wire Line
+	2600 4500 2600 4300
+Connection ~ 2150 4300
+Text Label 1900 3350 0    60   ~ 0
+USBGND
+Wire Wire Line
+	6800 2850 6950 2850
+Wire Wire Line
+	6950 2850 6950 3200
+Connection ~ 6950 3200
+Wire Wire Line
+	4000 2900 5100 2900
 $EndSCHEMATC
