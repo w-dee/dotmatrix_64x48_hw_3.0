@@ -11,7 +11,11 @@
 #define BUTTON_SENS_GPIO 16
 
 #define LED_MAX_ROW 24
-#define LED_MAX_COL 64
+#define LED_MAX_COL 128
+
+#define LED_MAX_LOGICAL_ROW 48
+#define LED_MAX_LOGICAL_COL 64
+
 
 // inline fast version of digitalWrite
 #define dW(pin, val)  do { if(pin < 16){ \
@@ -59,7 +63,7 @@ static void led_init_spi_and_ledclock()
 	// setup hardware SPI
 	SPI.begin();
 	SPI.setHwCs(false);
-	SPI.setFrequency((int)11451419.19);
+	SPI.setFrequency((int)20000000);
 	SPI1U = SPIUMOSI | SPIUSSE | SPIUFWDUAL;
 	SPI1C |= SPICFASTRD | SPICDOUT; // use DIO
 	SPI1C &= ~(SPICWBO | SPICRBO); // MSB first
@@ -213,8 +217,8 @@ static constexpr uint32_t gamma_table[256] = {
 static void ICACHE_RAM_ATTR led_sel_row(int n)
 {
 	static constexpr uint32_t bit_sel_pattern[LED_MAX_ROW + 1] = {
-		0, // for -1
-#define BP(N) byte_reverse(1U << (31-(N)))
+		-1, // for -1
+#define BP(N) (~byte_reverse(1U << (31-(N))))
 #define BP8(N) \
 	BP((N)+0),BP((N)+1),BP((N)+2),BP((N)+3), \
 	BP((N)+4),BP((N)+5),BP((N)+6),BP((N)+7) 
@@ -268,8 +272,8 @@ static void ICACHE_RAM_ATTR led_sel_row_commit()
 /**
  * The frame buffer
  */
-static unsigned char frame_buffer[LED_MAX_ROW][LED_MAX_COL] = {
-	#include "op.inc"
+static unsigned char frame_buffer[LED_MAX_LOGICAL_ROW][LED_MAX_LOGICAL_COL] = {
+//	#include "op.inc"
 };
 
 static int current_row; //!< current scanning row
@@ -288,21 +292,19 @@ static void ICACHE_RAM_ATTR button_read_gpio()
 	button_read = value;
 }
 
-static constexpr int max_phase = 7; //!< phase count
+static constexpr int max_phase = 11; //!< phase count
 	// current_phase
 	// 0:             : row commit, set LED1642 control word
-	// 1:             : read buttons, increment row, led (15 14 13 12)
-	// 2:             : led (11 10  9  8)
-	// 3:             : led ( 7  6  5  4)
-	// 4:             : blank row
-	// 5:             : row commit, led ( 3  2  1  0)
-	// 6:             : set row
-
-	// the interrupt timing of each phase is like this:
-	// we try to minimize phase 5->6 and 6->0 duration, because
-	// in these phase LED are off, long interrupt inverval
-	//  lead to dimmed display. 
-	// 0--1--------2---------3-----------4---5-----6---
+	// 1:             : read buttons, increment row, led ([0])
+	// 2:             : led ([2])
+	// 3:             : led ([4])
+	// 4:             : led ([6])
+	// 5:             : led ([8])
+	// 6:             : led ([10])
+	// 7:             : led ([12])
+	// 8:             : blank row
+	// 9:             : row commit, led ([14])
+	// 10:            : set row
 
 	// each phase is distributed into small interrupts,
 	// to minimize interrupt latency.
@@ -310,16 +312,21 @@ static constexpr int max_phase = 7; //!< phase count
 /**
  * timer counter value
  */
+
 static constexpr int32_t timer_interval = 32768; //!< timer hsync interval in 80MHz cycle
 static constexpr int32_t timer_duration_phase[max_phase] = //!< timer duration of each phase
 	{
-		3000,
-		6368,
-		8000,
-		7400,
-		2000,
-		4000,
-		2000
+3000	,
+4468	,
+2900	,
+2900	,
+2900	,
+2900	,
+2900	,
+3300	,
+2300	,
+2900	,
+2300	,
 	};
 static constexpr int phase_sum(int index) { return index == -1 ? 0 : timer_duration_phase[index] + phase_sum(index-1); }
 static_assert(phase_sum(max_phase-1) == timer_interval, "timer_interval sum mismatch");
@@ -329,11 +336,32 @@ static uint32_t next_tick;
 /**
  * set one line brightness
  */
-static void ICACHE_RAM_ATTR led_set_brightness_one_row(int start_led)
+static void ICACHE_RAM_ATTR led_set_brightness_one_row(int start_led, bool do_global_latch = false)
 {
 	// TODO: write stride explanation here
-	static_assert(LED_MAX_COL == 64, "sorry at this point LED_MAX_COL is not flexible");
-	const uint8_t *buf = frame_buffer[current_row];
+	/*
+		led order:
+		  0   2   4   6   8  10  12  14  ...
+		  1   3   5   7   9  11  13  15  ...
+
+		VRAM order:
+	0:	  0   1   2   3   4   5   6   7 ...
+	1:	  0   1   2   3   4   5   6   7 ...
+
+		16 LEDs can be set at most per one call to this function
+
+		first (on VRAM address)
+		offset row0 start_led + 0  +   : 0,  1*16,  2*16,  3*16,  4*16,  5*16,  6*16,  7*16(LATCH),
+		offset row1 start_led + 0  +   : 0,  1*16,  2*16,  3*16,  4*16,  5*16,  6*16,  7*16(LATCH),
+		
+			
+	*/ 
+
+
+
+//	static_assert(LED_MAX_COL == 64, "sorry at this point LED_MAX_COL is not flexible");
+	const uint8_t *buf = frame_buffer[current_row*2];
+	const uint8_t *buf2 = frame_buffer[current_row*2+1];
 
 	volatile uint32_t * fifoPtr = &SPI1W0;
 
@@ -348,25 +376,25 @@ static void ICACHE_RAM_ATTR led_set_brightness_one_row(int start_led)
 	// fill fifo with buffer, with
 	// converting gamma and adding latch pattern
 #define WR(N, L) do { \
-	uint32_t w = gamma_table[buf[start_led + (N)]]; w += L; \
+	uint32_t w = gamma_table[*(N)]; w += L; \
 	*(fifoPtr++) = w; } while(0)
-#define PL(I,C,L) WR((I) +  ((LED_MAX_COL / 16)-1)*16 + (C) * -16, L )
-	PL(3, 0, 0);
-	PL(3, 1, 0);
-	PL(3, 2, 0);
-	PL(3, 3, data_latch_pattern);
-	PL(2, 0, 0);
-	PL(2, 1, 0);
-	PL(2, 2, 0);
-	PL(2, 3, data_latch_pattern);
-	PL(1, 0, 0);
-	PL(1, 1, 0);
-	PL(1, 2, 0);
-	PL(1, 3, data_latch_pattern);
-	PL(0, 0, 0);
-	PL(0, 1, 0);
-	PL(0, 2, 0);
-	PL(0, 3, start_led == 0 ? global_latch_pattern : data_latch_pattern);
+#define PL(I,C,L) WR((I)+start_led+(C), (L) )
+	PL(0*8,buf,  0);
+	PL(1*8,buf,  0);
+	PL(2*8,buf,  0);
+	PL(3*8,buf,  0);
+	PL(4*8,buf,  0);
+	PL(5*8,buf,  0);
+	PL(6*8,buf,  0);
+	PL(7*8,buf,  data_latch_pattern);
+	PL(0*8,buf2, 0);
+	PL(1*8,buf2, 0);
+	PL(2*8,buf2, 0);
+	PL(3*8,buf2, 0);
+	PL(4*8,buf2, 0);
+	PL(5*8,buf2, 0);
+	PL(6*8,buf2, 0);
+	PL(7*8,buf2, do_global_latch ? global_latch_pattern : data_latch_pattern);
 
 
 	// begin SPI transaction
@@ -407,7 +435,7 @@ static void ICACHE_RAM_ATTR led_set_led1642_reg(uint32_t latch_pattern, uint32_t
 
 	volatile uint32_t * fifoPtr = &SPI1W0;
 
-	led_spi_set_length(32*4);
+	led_spi_set_length(32*(LED_MAX_COL / 16));
 
 	// for each LED1642
 	for(int i = 0; i < LED_MAX_COL / 16; ++i)
@@ -440,12 +468,27 @@ static bool led1642_configration_reg_changed;
  */
 static void led_init_led1642()
 {
-	led1642_configration_reg = byte_reverse(bit_interleave(1<<15)); // 4096 brightness steps
-	led_set_led1642_reg(
-		config_reg_pattern_from_num(7), 
-		led1642_configration_reg
-		); // write to config reg
-	while(SPI1CMD & SPIBUSY) /**/ ; // wait for previous SPI transaction
+	led1642_configration_reg =
+		byte_reverse(bit_interleave(
+			(1<<15) | (1<<13))); // 4096 brightness steps, SDO delay
+
+	// Here we should repeat setting configuration register several times
+	// at least number of LED1642.
+	// We should enable SDO delay because the timing is too tight to
+	// transfer data on the serial chain if no SDO delay is applied.
+	// Because SDO delay would be set properly only if the previous
+	// LED1642 on the chain has delay on the data,
+	// so we must set SDO delay one by one from the first LED1642 on the chain
+	// to make all LED1642s have proper configuration.
+
+	for(int i = 0; i < (LED_MAX_COL / 16)*2; ++i)
+	{
+		led_set_led1642_reg(
+			config_reg_pattern_from_num(7), 
+			led1642_configration_reg
+			); // write to config reg
+		while(SPI1CMD & SPIBUSY) /**/ ; // wait for previous SPI transaction
+	}
 	led_set_led1642_reg(
 		config_reg_pattern_from_num(1),
 		byte_reverse(bit_interleave(0xffff)) // all led on
@@ -459,6 +502,7 @@ static void led_init_led1642()
  */
 static void ICACHE_RAM_ATTR led_set_brightness()
 {
+
 	switch(current_phase)
 	{
 	case 0:
@@ -479,27 +523,43 @@ static void ICACHE_RAM_ATTR led_set_brightness()
 		++ current_row;
 		if(current_row >= LED_MAX_ROW) current_row = 0;
 
-		led_set_brightness_one_row(12);
-		break;
-
-	case 2:
-		led_set_brightness_one_row(8);
-		break;
-
-	case 3:
-		led_set_brightness_one_row(4);
-		break;
-
-	case 4:
-		led_sel_row(-1);
-		break;
-
-	case 5:
-		led_sel_row_commit();
 		led_set_brightness_one_row(0);
 		break;
 
+	case 2:
+		led_set_brightness_one_row(1);
+		break;
+
+	case 3:
+		led_set_brightness_one_row(2);
+		break;
+
+	case 4:
+		led_set_brightness_one_row(3);
+		break;
+
+	case 5:
+		led_set_brightness_one_row(4);
+		break;
+
 	case 6:
+		led_set_brightness_one_row(5);
+		break;
+
+	case 7:
+		led_set_brightness_one_row(6);
+		break;
+
+	case 8:
+		led_sel_row(-1);
+		break;
+
+	case 9:
+		led_sel_row_commit();
+		led_set_brightness_one_row(7, true);
+		break;
+
+	case 10:
 		led_sel_row(current_row);
 
 		break;
@@ -509,7 +569,6 @@ static void ICACHE_RAM_ATTR led_set_brightness()
 	++current_phase;
 	if(current_phase == max_phase) current_phase = 0;
 }
-
 
 /**
  * interrupt counter
@@ -537,6 +596,7 @@ static constexpr uint32_t interrupt_delay = 50;
 static constexpr uint32_t max_overrun_count = 20;
 
 static int last_overrun_phase;
+
 
 /**
  * Timer interrupt handler
@@ -588,6 +648,7 @@ static void led_init_timer()
 	timer0_write(next_tick = ESP.getCycleCount() + timer_interval);
 }
 
+
 /**
  * Initialize LED matrix driver
  */
@@ -602,8 +663,8 @@ void led_init()
 
 
 
-#define W 80
-#define H 32
+#define W 160
+#define H 60
 
 static unsigned char buffer[H][W] = { {0} };
 
@@ -657,21 +718,44 @@ static void step()
 
 void test_led_sel_row()
 {
-	frame_buffer[0][0] = 255;
+	
+
+	for(int i = 0; i < 48; i++)
+		frame_buffer[i][i] = 255;
+
 /*
+while(1)
+{
+
 	while(current_phase != 1) led_set_brightness();
-delay(100);
+
 	led_set_brightness();
 */
 /*
-	step();
-
-	for(int y = 0; y < 24; y++)
+step();
+	for(int y = 0; y < 48; y++)
 	{
-		memcpy(frame_buffer[y], buffer[y] + 10, 64);
+		memcpy(frame_buffer[y], buffer[y] + 10, 128);
 	}
-	delay(10);
+delay(10);
 */
+/*
+if(current_row == 0)
+{
+	static int nf = 0;
+	++nf;
+	if((nf & 3) == 3)
+	{
+	step();
+	}
+
+	break;
+}
+
+}
+*/
+
+
 	static uint32_t next = millis() + 1000;
 	if(millis() >= next)
 	{
@@ -680,7 +764,10 @@ delay(100);
 		interrupt_count = 0;
 		interrupt_overrun = false;
 		next =millis() + 1000;
+
+
 	}
+
 }
 
 

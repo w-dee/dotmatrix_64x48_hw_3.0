@@ -43,10 +43,10 @@ void setup(void){
   led_init();
   Wire.begin(WIRE_SDA, WIRE_SCL);
 
-
+/*
   bme280.begin();
   bme280.setMode(BME280_MODE_NORMAL, BME280_TSB_1000MS, BME280_OSRS_x1, BME280_OSRS_x1, BME280_OSRS_x1, BME280_FILTER_OFF);
-
+*/
 
 
   WiFi.begin(ssid, password);
@@ -88,9 +88,9 @@ void test_led_sel_row();
 void loop() 
 {
 	test_led_sel_row();
-	button_update();
+//	button_update();
 	server.handleClient();
-
+/*
 	if(buttons[BUTTON_OK])
 	{
 		buttons[BUTTON_OK] = 0;
@@ -135,6 +135,7 @@ void loop()
 			Serial.printf("IR state : %d\r\n", (int)new_ir_status);
 		}
 	}
+*/
 }
 
 
