@@ -1231,18 +1231,4 @@ $EndComp
 Wire Wire Line
 	7600 5250 7650 5250
 Connection ~ 7650 5250
-$Comp
-L TEST_1P W8
-U 1 1 58AD1B5D
-P 1300 2450
-F 0 "W8" V 1300 2350 50  0000 C CNN
-F 1 "TEST_1P" V 1404 2524 50  0001 C CNN
-F 2 "Measurement_Points:Measurement_Point_Round-SMD-Pad_Small" H 1500 2450 50  0001 C CNN
-F 3 "" H 1500 2450 50  0000 C CNN
-	1    1300 2450
-	-1   0    0    1   
-$EndComp
-Wire Wire Line
-	1300 2450 1350 2450
-Connection ~ 1350 2450
 $EndSCHEMATC
