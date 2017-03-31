@@ -410,4 +410,19 @@ Wire Wire Line
 Connection ~ 6950 3200
 Wire Wire Line
 	4000 2900 5100 2900
+$Comp
+L C C79
+U 1 1 58D9CBF0
+P 2650 3550
+F 0 "C79" H 2600 3150 50  0000 L CNN
+F 1 "1u" H 2600 3050 50  0000 L CNN
+F 2 "Capacitors_SMD:C_0603_HandSoldering" H 2765 3459 50  0001 L CNN
+F 3 "" H 2650 3550 50  0000 C CNN
+	1    2650 3550
+	1    0    0    -1  
+$EndComp
+Connection ~ 2650 3700
+Wire Wire Line
+	2650 3400 2650 3350
+Connection ~ 2650 3350
 $EndSCHEMATC
