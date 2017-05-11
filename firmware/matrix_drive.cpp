@@ -2,6 +2,7 @@
 #include <SPI.h>
 #include "eagle_soc.h"
 #include <ESP8266WiFi.h>
+#include "frame_buffer.h"
 
 #define LED_COL_SER_GPIO 13 // 13=MOSI
 #define LED_COL_LATCH_GPIO 12 // 12=MISO, but in DIO mode, it acts as second line of MOSI
@@ -12,9 +13,6 @@
 
 #define LED_MAX_ROW 24
 #define LED_MAX_COL 128
-
-#define LED_MAX_LOGICAL_ROW 48
-#define LED_MAX_LOGICAL_COL 64
 
 
 // inline fast version of digitalWrite
@@ -63,7 +61,7 @@ static void led_init_spi_and_ledclock()
 	// setup hardware SPI
 	SPI.begin();
 	SPI.setHwCs(false);
-	SPI.setFrequency((int)20000000);
+	SPI.setFrequency((int)10000000);
 	SPI1U = SPIUMOSI | SPIUSSE | SPIUFWDUAL;
 	SPI1C |= SPICFASTRD | SPICDOUT; // use DIO
 	SPI1C &= ~(SPICWBO | SPICRBO); // MSB first
@@ -214,7 +212,7 @@ static constexpr uint32_t gamma_table[256] = {
 	@param n   Row number to activate(0 .. LED_MAX_ROW-1).
 				Specify -1 to unselect all rows.
 */
-static void ICACHE_RAM_ATTR led_sel_row(int n)
+static void ICACHE_RAM_ATTR led_sel_row_prepare(int n)
 {
 	static constexpr uint32_t bit_sel_pattern[LED_MAX_ROW + 1] = {
 		-1, // for -1
@@ -243,19 +241,17 @@ static void ICACHE_RAM_ATTR led_sel_row(int n)
 
 	// three HC595s are connected after four LED1642,
 	// so we need to shift-out the dummy data from LED1642 to HC595.
-	// dummy data can be any pattern.
+	// here, we fill the fifo with zero, which will be later
+	// switch off data for LED1642.
 	constexpr int remain_len = ((LED_MAX_COL/16) * 16 - 1) / 32 + 1;
 	for(int i = 0; i < remain_len; ++i) *(fifoPtr ++) = 0;
 
 	// begin SPI transaction
 	SPI1CMD |= SPIBUSY;
 }
-
-static void ICACHE_RAM_ATTR led_sel_row_commit()
+static void ICACHE_RAM_ATTR led_sel_row_blank()
 {
-
-	// wait for SPI transaction
-	while(SPI1CMD & SPIBUSY) /**/ ;
+	while(SPI1CMD & SPIBUSY) /**/ ; // wait for previous SPI transaction
 
 	// let HC595 latching the data
 	led_hc595_latch_out(true);
@@ -266,15 +262,14 @@ static void ICACHE_RAM_ATTR led_sel_row_commit()
 
 	// reset HC595 latching line
 	led_hc595_latch_out(false);
-
 }
 
-/**
- * The frame buffer
- */
-static unsigned char frame_buffer[LED_MAX_LOGICAL_ROW][LED_MAX_LOGICAL_COL] = {
-//	#include "op.inc"
-};
+
+
+static void ICACHE_RAM_ATTR led_sel_row_show()
+{
+}
+
 
 static int current_row; //!< current scanning row
 static int current_phase; //!< current phase; 6 stage phase.
@@ -292,9 +287,9 @@ static void ICACHE_RAM_ATTR button_read_gpio()
 	button_read = value;
 }
 
-static constexpr int max_phase = 11; //!< phase count
+static constexpr int max_phase = 12; //!< phase count
 	// current_phase
-	// 0:             : row commit, set LED1642 control word
+	// 0:             : set LED1642 control word
 	// 1:             : read buttons, increment row, led ([0])
 	// 2:             : led ([2])
 	// 3:             : led ([4])
@@ -302,9 +297,10 @@ static constexpr int max_phase = 11; //!< phase count
 	// 5:             : led ([8])
 	// 6:             : led ([10])
 	// 7:             : led ([12])
-	// 8:             : blank row
-	// 9:             : row commit, led ([14])
-	// 10:            : set row
+	// 8:             : all led off(LED1642)
+	// 9:             : blank prepare (send next row data to the HC595)
+	// 10:            : blank row(HC595), led ([14])
+	// 11:            : show row(HC595), all led on(LED1642)
 
 	// each phase is distributed into small interrupts,
 	// to minimize interrupt latency.
@@ -316,17 +312,19 @@ static constexpr int max_phase = 11; //!< phase count
 static constexpr int32_t timer_interval = 32768; //!< timer hsync interval in 80MHz cycle
 static constexpr int32_t timer_duration_phase[max_phase] = //!< timer duration of each phase
 	{
-3000	,
-4468	,
+2700	,
+2968	,
+2700	,
+2700	,
+2700	,
+2700	,
+2700	,
+2700	,
+2700	,
+2700	,
 2900	,
-2900	,
-2900	,
-2900	,
-2900	,
-3300	,
-2300	,
-2900	,
-2300	,
+2600	,
+
 	};
 static constexpr int phase_sum(int index) { return index == -1 ? 0 : timer_duration_phase[index] + phase_sum(index-1); }
 static_assert(phase_sum(max_phase-1) == timer_interval, "timer_interval sum mismatch");
@@ -360,8 +358,8 @@ static void ICACHE_RAM_ATTR led_set_brightness_one_row(int start_led, bool do_gl
 
 
 //	static_assert(LED_MAX_COL == 64, "sorry at this point LED_MAX_COL is not flexible");
-	const uint8_t *buf = frame_buffer[current_row*2];
-	const uint8_t *buf2 = frame_buffer[current_row*2+1];
+	const uint8_t *buf = get_current_frame_buffer().array()[current_row*2];
+	const uint8_t *buf2 = get_current_frame_buffer().array()[current_row*2+1];
 
 	volatile uint32_t * fifoPtr = &SPI1W0;
 
@@ -496,6 +494,26 @@ static void led_init_led1642()
 	while(SPI1CMD & SPIBUSY) /**/ ; // wait for previous SPI transaction
 }
 
+
+static void ICACHE_RAM_ATTR led_sel_led1642_all_blank()
+{
+	while(SPI1CMD & SPIBUSY) /**/ ; // wait for previous SPI transaction
+	led_set_led1642_reg(
+		config_reg_pattern_from_num(1),
+		byte_reverse(bit_interleave(0x0000)) // all led off
+		); // write to switch reg
+}
+
+static void ICACHE_RAM_ATTR led_sel_led1642_all_show()
+{
+	while(SPI1CMD & SPIBUSY) /**/ ; // wait for previous SPI transaction
+	led_set_led1642_reg(
+		config_reg_pattern_from_num(1),
+		byte_reverse(bit_interleave(0xffff)) // all led on
+		); // write to switch reg
+}
+
+
 /**
 	Set LED1642 brightness timer handler
 
@@ -506,7 +524,6 @@ static void ICACHE_RAM_ATTR led_set_brightness()
 	switch(current_phase)
 	{
 	case 0:
-		led_sel_row_commit();
 		// set configuration register
 		if(led1642_configration_reg_changed)
 		{
@@ -551,17 +568,21 @@ static void ICACHE_RAM_ATTR led_set_brightness()
 		break;
 
 	case 8:
-		led_sel_row(-1);
+		led_sel_led1642_all_blank();
 		break;
 
 	case 9:
-		led_sel_row_commit();
-		led_set_brightness_one_row(7, true);
+		led_sel_row_prepare(current_row);
 		break;
 
 	case 10:
-		led_sel_row(current_row);
+		led_sel_row_blank();
+		led_set_brightness_one_row(7, true);
+		break;
 
+	case 11:
+		led_sel_row_show();
+		led_sel_led1642_all_show();
 		break;
 	}
 
@@ -715,14 +736,38 @@ static void step()
 
 
 
-
+#include "fonts/font_5x5.h"
+#include "fonts/font_bff.h"
+/*
+unsigned char PROGMEM op[][64] = {
+#include "op.inc"
+};
+*/
 void test_led_sel_row()
 {
-	
+/*
+	for(int y = 0; y < 48; y++)
+	{
+		for(int x = 0; x < 64; x++)
+		{
+			get_current_frame_buffer().array()[y][x] = pgm_read_byte(&(op[y][x]));
+		}
+	}
+*/
+//
+//	for(int i = 0; i < 48; i++)
+//		for(int j = 0; j < 64; j++)
+//		frame_buffer[i][j] = 255;
+static int count = 0;
+if(count == 0)
+{
+	get_current_frame_buffer().draw_text(0, 0, 255, "嫁募集", font_bff);
+	get_current_frame_buffer().draw_text(0, 12, 255, "応募者全員", font_bff);
+	get_current_frame_buffer().draw_text(0, 24, 255, "キモおっさん", font_bff);
+	get_current_frame_buffer().draw_text(0, 36, 255, "　-dee", font_bff);
 
-	for(int i = 0; i < 48; i++)
-		frame_buffer[i][i] = 255;
-
+	++count;
+}
 /*
 while(1)
 {

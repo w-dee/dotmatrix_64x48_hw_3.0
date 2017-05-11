@@ -1,0 +1,62 @@
+#ifndef FRAMEBUFFER_H_
+#define FRAMEBUFFER_H_
+
+static constexpr int LED_MAX_LOGICAL_ROW = 48;
+static constexpr int LED_MAX_LOGICAL_COL = 64;
+
+class font_base_t;
+
+class frame_buffer_t
+{
+public:
+	typedef unsigned char array_t[LED_MAX_LOGICAL_ROW][LED_MAX_LOGICAL_COL];
+
+private:
+	array_t buffer;
+
+public:
+	//! returns width
+	int get_width() const { return LED_MAX_LOGICAL_COL; }
+	//! returns height
+	int get_height() const { return LED_MAX_LOGICAL_ROW; }
+
+	//! Returns array
+	array_t & ICACHE_RAM_ATTR array() { return buffer; }
+
+	//! Set point at specified intencity level.
+	//! Note that this method does not check the boundary.
+	void set_point(int x, int y, int level)
+	{
+		buffer[y][x] = level;
+	}
+	//! get intencity level at specified point.
+	//! Note that this method does not check the boundary.
+	int get_point(int x, int y) const
+	{
+		return buffer[y][x] ;
+	}
+
+	//! Draw a character at specified position
+	void draw_char(int x, int y, int level, int ch, const font_base_t & font); 
+
+	//! Draw text at specified position
+	void draw_text(int x, int y, int level, const __FlashStringHelper *ifsh, const font_base_t & font); 
+
+	void draw_text(int x, int y, int level, const String &s, const font_base_t & font)
+	{
+			draw_text(x, y, level, s.c_str(), font);
+	}
+
+	void draw_text(int x, int y, int level, const char *s, const font_base_t & font); 
+};
+
+
+// the framebuffer
+extern frame_buffer_t buffers[2]; // for double buffering
+extern frame_buffer_t & current_frame_buffer;
+
+static inline ICACHE_RAM_ATTR frame_buffer_t & get_current_frame_buffer() { return current_frame_buffer;}
+
+
+
+#endif

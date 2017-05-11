@@ -1,10 +1,13 @@
-MAKEESPARDUINO=~/Arduino/makeEspArduino/makeEspArduino.mk VERBOSE=1
+VERBOSE=1
+include ~/Arduino/makeEspArduino/makeEspArduino.mk
 
-.PHONY: all upload
+FONT_FILE_NAME=fonts/takaop.bff
+FONT_FILE_START_ADDRESS=0x100000
 
-all:
-	make -f $(MAKEESPARDUINO)
+FONT_UPLOAD_COM = $(shell echo $(UPLOAD_COM) | perl -npe "s! -ca .*! -ca $(FONT_FILE_START_ADDRESS) -cf $(FONT_FILE_NAME)!")
 
-upload:
-	make -f $(MAKEESPARDUINO) upload
-	
+
+font_upload:
+	$(FONT_UPLOAD_COM)
+
+

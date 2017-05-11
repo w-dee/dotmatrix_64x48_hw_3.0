@@ -1,4 +1,7 @@
 #include <Arduino.h>
+#include "font_5x5.h"
+#include "frame_buffer.h"
+
 static constexpr unsigned char operator "" _b (const char *p, size_t) {
 	return
 		((p[0]!=' ') << 4) + 
@@ -7,7 +10,7 @@ static constexpr unsigned char operator "" _b (const char *p, size_t) {
 		((p[3]!=' ') << 1) + 
 		((p[4]!=' ') << 0) ; 
 	}
-const PROGMEM unsigned char font_5x5[][5] = {
+const PROGMEM unsigned char font_5x5_data[][5] = {
 { // 0x21 !
 "  @  "_b,
 "  @  "_b,
@@ -29,7 +32,7 @@ const PROGMEM unsigned char font_5x5[][5] = {
 "@@@@@"_b,
 " @ @ "_b,
 },
-{ // 0x24 #
+{ // 0x24 $
 " @@@ "_b,
 "@ @  "_b,
 " @@@ "_b,
@@ -212,6 +215,13 @@ const PROGMEM unsigned char font_5x5[][5] = {
 "     "_b,
 "@@@@@"_b,
 "     "_b,
+},
+{ // 0x3e 
+"@    "_b,
+" @   "_b,
+"  @  "_b,
+" @   "_b,
+"@    "_b,
 },
 { // 0x3f ?
 " @@@ "_b,
@@ -532,11 +542,11 @@ const PROGMEM unsigned char font_5x5[][5] = {
 "@  @@"_b,
 },
 { // 0x6c l
-"  @  "_b,
-"  @  "_b,
-"  @  "_b,
-"  @  "_b,
-"  @@ "_b,
+" @   "_b,
+" @   "_b,
+" @   "_b,
+" @   "_b,
+" @@  "_b,
 },
 { // 0x6d m
 "     "_b,
@@ -670,4 +680,52 @@ const PROGMEM unsigned char font_5x5[][5] = {
 
 
 }; 
+
+font_base_t::metrics_t font_5x5_t::get_metrics(int32_t chr) const
+{
+	// this font covers 0x20~ 0x7e
+	if(chr < 0x20 || chr > 0x7e)
+		return metrics_t{0,0,false};
+	else
+		return metrics_t{6,6,true};
+}
+
+void font_5x5_t::put(int32_t chr, int level, int x, int y, frame_buffer_t & fb) const
+{
+	int fx = 0, fy = 0;
+	int w = 5, h = 5;
+
+	// clip font bounding box
+	if(x < 0)
+		fx += -x, w -= -x, x = 0;
+	if(y < 0)
+		fy += -y, h -= -h, y = 0;
+	if(x + w >= fb.get_width())
+		w -= fb.get_width() - (x + w);
+	if(y + h >= fb.get_height())
+		h -= fb.get_height() - (y + h);
+
+	// return if thereis nothing to draw
+	if(w <= 0 || h <= 0 || chr <= 0x20 || chr > 0x7e) return;
+
+	// draw the pattern
+	const unsigned char *p = &(font_5x5_data[chr -0x21][0]);
+
+	for(int yy = y; yy < h+y; ++yy, ++fy)
+	{
+		unsigned char line = pgm_read_byte(p + fy);
+//		Serial.printf("line %d: %02x\r\n", fy, line);
+		int fxx = fx;
+		for(int xx = x; xx < w+x; ++xx, ++fxx)
+		{
+			if(line & (1<<(4-fxx)))
+			{
+//				Serial.printf("%d %d %d %d \r\n", fxx, fy, xx, yy);
+				fb.set_point(xx, yy, level);
+			}
+		}
+	}
+}
+
+font_5x5_t font_5x5;
 

@@ -4,13 +4,14 @@ ROOT := $(THIS_DIR)/..
 LIBS = $(ESP_LIBS)/SPI \
   $(ESP_LIBS)/Wire \
   $(ESP_LIBS)/ESP8266WiFi \
-  $(ESP_LIBS)/WiFiClient \
   $(ESP_LIBS)/ESP8266WebServer \
   $(ESP_LIBS)/ESP8266mDNS 
   
 
-UPLOAD_SPEED = 115200
+UPLOAD_SPEED = 921600
 
 
 UPLOAD_RESET = nodemcu
+
+FLASH_DEF = 4M1M
 

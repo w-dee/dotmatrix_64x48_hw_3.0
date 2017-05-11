@@ -2,6 +2,7 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include <Wire.h>
+#include <FS.h>
 
 #include "../../../../.config/ssid.h"
 
@@ -9,6 +10,7 @@
 #include "buttons.h"
 #include "ir_control.h"
 #include "bme280.h"
+#include "fonts/font_bff.h"
 
 #define WIRE_SDA 0
 #define WIRE_SCL 5
@@ -35,6 +37,8 @@ void handleNotFound(){
   }
   server.send(404, "text/plain", message);
 }
+
+extern uint32_t _SPIFFS_start;
 
 void setup(void){
   Serial.begin(115200);
@@ -77,6 +81,25 @@ void setup(void){
 
   server.begin();
   Serial.println("HTTP server started");
+
+Serial.printf("Flash size : %d %08x\r\n", ESP.getFlashChipSize(), (uint32_t)_SPIFFS_start);
+
+Serial.printf("%08x\r\n", *reinterpret_cast<uint32_t*>(1024*1024 + 0x40200000));
+
+	FSInfo info;
+	SPIFFS.begin();
+	SPIFFS.info(info);
+	Serial.printf("totalBytes    : %d\r\n", info.totalBytes);
+	Serial.printf("usedBytes     : %d\r\n", info.usedBytes);
+	Serial.printf("blockSize     : %d\r\n", info.blockSize);
+	Serial.printf("pageSize      : %d\r\n", info.pageSize);
+	Serial.printf("maxOpenFiles  : %d\r\n", info.maxOpenFiles);
+	Serial.printf("maxPathLength : %d\r\n", info.maxPathLength);
+
+
+	Serial.printf("begin font init\r\n");
+	font_bff.begin(1024*1024);
+	Serial.printf("end font init\r\n");
 }
 
 
