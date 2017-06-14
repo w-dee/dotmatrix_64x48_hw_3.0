@@ -29,3 +29,7 @@ fp-lib-table
 hardware/gerber/pass*
 hardware/gerber/*.zip
 
+
+*.xcf
+firmware.bin
+
