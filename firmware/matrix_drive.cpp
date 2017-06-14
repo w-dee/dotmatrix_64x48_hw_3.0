@@ -682,6 +682,12 @@ void led_init()
 }
 
 
+/**
+ * LED uninitialization
+ */
+void led_uninit()
+{
+}
 
 
 #define W 160
@@ -761,9 +767,9 @@ void test_led_sel_row()
 static int count = 0;
 if(count == 0)
 {
-	get_current_frame_buffer().draw_text(0, 0, 255, "嫁募集", font_bff);
-	get_current_frame_buffer().draw_text(0, 12, 255, "応募者全員", font_bff);
-	get_current_frame_buffer().draw_text(0, 24, 255, "キモおっさん", font_bff);
+	get_current_frame_buffer().draw_text(0, 0, 255, "a", font_bff);
+	get_current_frame_buffer().draw_text(0, 12, 255, "b", font_bff);
+	get_current_frame_buffer().draw_text(0, 24, 255, "c", font_bff);
 	get_current_frame_buffer().draw_text(0, 36, 255, "　-dee", font_bff);
 
 	++count;
