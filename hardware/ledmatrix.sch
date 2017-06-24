@@ -40,7 +40,6 @@ LIBS:allegro
 LIBS:switches
 LIBS:pspice
 LIBS:transf
-LIBS:logo
 LIBS:relays
 LIBS:ttl_ieee
 LIBS:diode
