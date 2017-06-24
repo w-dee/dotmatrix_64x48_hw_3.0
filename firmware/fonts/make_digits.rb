@@ -19,7 +19,7 @@ puts "static constexpr int #{name}_COUNT = #{$count};"
 
 idx = ""
 
-puts "static const PROGMEM char * #{name}_BITMAP = "
+puts "static const PROGMEM char #{name}_BITMAP[] = "
 (0..($count-1)).each do |i|
 	(0..($height-1)).each do |y|
 		print "\""

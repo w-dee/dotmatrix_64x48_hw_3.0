@@ -6,12 +6,12 @@
 //!  antialiased glyph font class
 class font_aa_t : public font_base_t
 {
-	const glyph_header_t * glyph_header;
+	const glyph_header_t & glyph_header;
 
 	const glyph_t * get_glyph(int32_t chr) const; 
 
 public:
-	font_aa_t(const glyph_header_t *glyph_header_) : glyph_header(glyph_header_) {}
+	font_aa_t(const glyph_header_t &glyph_header_) : glyph_header(glyph_header_) {}
 
 	virtual int get_height() const; // including space
 
@@ -20,6 +20,10 @@ public:
 	virtual void put(int32_t chr, int level, int x, int y, frame_buffer_t & fb) const;
 };
 
+
+extern font_aa_t font_large_digits;
+extern font_aa_t font_bold_digits;
+extern font_aa_t font_week_names;
 
 #endif
 

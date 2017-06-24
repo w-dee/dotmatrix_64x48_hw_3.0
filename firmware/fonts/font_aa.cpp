@@ -4,11 +4,10 @@
 #include "font.h"
 #include "font_aa.h"
 
-#include "large_digits.inc"
 
 const glyph_t * font_aa_t::get_glyph(int32_t chr) const
 {
-	int count = pgm_read_dword(&glyph_header->num_glyphs);
+	int count = pgm_read_dword(&glyph_header.num_glyphs);
 
 	uint32_t s = 0;
 	uint32_t e = count;
@@ -17,7 +16,7 @@ const glyph_t * font_aa_t::get_glyph(int32_t chr) const
 	do
 	{
 		uint32_t m = (s+e)/2;
-
+Serial.printf("%d %d %d %d %d\r\n", s, e, m, count, chr);
 		switch(e - s)
 		{
 		case 0:
@@ -26,15 +25,16 @@ const glyph_t * font_aa_t::get_glyph(int32_t chr) const
 
 		case 1:
 			// last one found
-			g = glyph_header->array + m;
-			if(pgm_read_dword(g->code_point) == chr)
+			g = glyph_header.array + m;
+			if(pgm_read_dword(&g->code_point) == chr)
 				return g; // found
 			return nullptr; // not found
 
 		default:
 			// do binary search
-			g = glyph_header->array + m;
-			int cp = pgm_read_dword(g->code_point);
+			g = glyph_header.array + m;
+			int cp = pgm_read_dword(&g->code_point);
+Serial.printf("m's cp : %d\r\n", cp);
 			if(cp == chr)
 				return g; // found
 			if(cp < chr)
@@ -49,7 +49,7 @@ const glyph_t * font_aa_t::get_glyph(int32_t chr) const
 
 int font_aa_t::get_height() const
 {
-	return pgm_read_dword(&glyph_header->nominal_height);
+	return pgm_read_dword(&glyph_header.nominal_height);
 }
 
 font_base_t::metrics_t font_aa_t::get_metrics(int32_t chr) const
@@ -112,4 +112,10 @@ void font_aa_t::put(int32_t chr, int level, int x, int y, frame_buffer_t & fb) c
 	}
 }
 
+#include "large_digits.inc"
+font_aa_t font_large_digits(LARGE_DIGITS);
+#include "bold_digits.inc"
+font_aa_t font_bold_digits(BOLD_DIGITS);
+#include "week_names.inc"
+font_aa_t font_week_names(WEEK_NAMES);
 

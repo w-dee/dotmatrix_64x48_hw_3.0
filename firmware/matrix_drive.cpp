@@ -50,7 +50,119 @@ static void led_init_gpio()
 	digitalWrite(LED_SER_CLOCK_GPIO, LOW);
 }
 
+/**
+ * simple lfsr function
+ */
+static uint32_t led_lfsr(uint32_t lfsr)
+{
+	lfsr = (lfsr >> 1) ^ (-(lfsr & 1u) & 0xd0000001u);
+	return lfsr;
+}
 
+static void led_print_0_1(int v)
+{
+	if(v) Serial.print(F("1")); else Serial.print(F("0"));
+}
+
+/**
+ * Set initial LED1642 configuration for POST
+ */
+static void led_post_set_led1642_config()
+{
+	constexpr uint16_t led_config = (1<<13); // enable SDO delay
+	for(int i = 0; i < LED_MAX_COL / 16; ++i)
+	{
+		for(int bit = 15; bit >= 0; --bit)
+		{
+			// set bit
+			dW(LED_COL_SER_GPIO, !!(led_config & (1<<bit)));
+
+			// latch on
+			if(i == (LED_MAX_COL / 16 - 1) &&
+				bit == 7-1)
+			{
+				// latch (clock count while latch is active = 7, set CR function)
+				dW(LED_COL_LATCH_GPIO, 1);
+			}
+			// clock
+			dW(LED_SER_CLOCK_GPIO, 1);
+			dW(LED_SER_CLOCK_GPIO, 0);
+		}
+		// latch off
+		dW(LED_COL_LATCH_GPIO, 0);
+	}
+}
+
+/**
+ * POST check of serial chain
+ */
+static void led_post()
+{
+	delay(2000);
+	// this check uses GPIO, not SPI hardware.
+
+	// set SDO delay; see also led_init_led1642() description
+	for(int i = 0; i < (LED_MAX_COL / 16) * 2; ++i)
+		led_post_set_led1642_config();
+
+	// prepare for sending bits
+	constexpr int num_bits = LED_MAX_COL + LED_MAX_ROW;
+	uint32_t lfsr = 0xabcd0123;
+
+	Serial.println(F("LED matrix driver: Checking serial data path ..."));
+
+	Serial.print(F("sent    :"));
+	// shift in test pattern into the shift register.
+	for(int i = 0; i < num_bits; ++i)
+	{
+		// unfortunately (fortunately?) there is no need to
+		// insert wait between these bit-banging, since
+		// ESP8266's GPIO is very slow.
+		dW(LED_COL_SER_GPIO, lfsr & 1);
+		led_print_0_1(lfsr&1);
+		dW(LED_SER_CLOCK_GPIO, 1);
+		dW(LED_SER_CLOCK_GPIO, 0);
+		lfsr = led_lfsr(lfsr);
+	}
+	Serial.print(F("\r\n"));
+
+	// then, read these bits out
+	pinMode(LED_COL_SER_GPIO, INPUT);
+		// shift register's output shares its input pin.
+	lfsr = 0xabcd0123;
+	Serial.print(F("received:"));
+	bool error = false;
+	for(int i = 0; i < num_bits; ++i)
+	{
+		// sense the input pin;
+		// we may need some delay here because
+		// driving the input pin is very weak.
+		delayMicroseconds(10);
+		int r = digitalRead(LED_COL_SER_GPIO);
+		led_print_0_1(r);
+		if(r != (lfsr & 1))
+		{
+			// error found
+			error = true;
+		}
+		
+		dW(LED_SER_CLOCK_GPIO, 1);
+		dW(LED_SER_CLOCK_GPIO, 0);
+		lfsr = led_lfsr(lfsr);
+	}
+	Serial.print(F("\r\n"));
+	pinMode(LED_COL_SER_GPIO, OUTPUT);
+
+	if(error)
+	{
+		Serial.println(F("Sent serial data does not return to the sender. Check each components are properly soldered."));
+		// TODO: do panic 
+	}
+	else
+	{
+		Serial.println(F("Serial data path check suceeded."));
+	}
+}
 
 
 /**
@@ -61,7 +173,7 @@ static void led_init_spi_and_ledclock()
 	// setup hardware SPI
 	SPI.begin();
 	SPI.setHwCs(false);
-	SPI.setFrequency((int)10000000);
+	SPI.setFrequency((int)11428571);
 	SPI1U = SPIUMOSI | SPIUSSE | SPIUFWDUAL;
 	SPI1C |= SPICFASTRD | SPICDOUT; // use DIO
 	SPI1C &= ~(SPICWBO | SPICRBO); // MSB first
@@ -91,12 +203,20 @@ static void led_init_spi_and_ledclock()
 
 	// write FIFO pattern
 	// 8 rising edge in 32bit, and the clock is 80MHz, thus the output is 20MHz.
-	// we add an intended jitter (spread spectrum) to the pattern, to reduce EMI.
+	// we add an intended jitter (spread spectrum; SS) to the pattern, to reduce EMI.
 	// the I2S hardware in ESP8266 will repeat this pattern.
-	I2STXF = 
-//			0b11100011010010100000100001110110; // ~~ -6db peak reduction compared to 0b11001100...
-			0b11100110010010010000100001100100; // more L than above; for pull-uped output
-//			0b11001100110011001100110011001100; // no SS pattern
+
+	// BUT,
+	// It seems the WiFi functionality works better if the SS is not used;
+	// Maybe non-ideal quick and dirty SS is worse than the non-SS signal. sigh.
+	I2STXF = 0
+//			|0b11100011010010100000100001110110 // ~~ -6db peak reduction compared to 0b11001100...
+//			|0b11100110010010010000100001100100 // more L than above; for pull-uped output
+			|0b11001100110011001100110011001100 // no SS pattern
+//			|0xf0f0f0f0 // no SS pattern
+//			|0xffff0000 // no SS pattern
+//			|0xaaaaaaaa
+	;
 
 	// start I2S
 	I2SC |= I2STXS; //Start transmission
@@ -283,7 +403,7 @@ static void ICACHE_RAM_ATTR button_read_gpio()
 	uint32_t value = button_read;
 	uint32_t bit = (1U << current_row);
 	value &= ~bit;
-	if(GP16I & 0x01) value |= bit;
+	if(!(GP16I & 0x01)) value |= bit;
 	button_read = value;
 }
 
@@ -461,14 +581,17 @@ static uint32_t led1642_configration_reg;
  */
 static bool led1642_configration_reg_changed;
 
+
 /**
 	Initialize LED1642
  */
 static void led_init_led1642()
 {
+	// See also: led_post() also sets initial setting for LED1642 only for POST
 	led1642_configration_reg =
 		byte_reverse(bit_interleave(
-			(1<<15) | (1<<13))); // 4096 brightness steps, SDO delay
+			(1<<11) | (1<<12) | // Output turn-on/off time: on:180ns, off:150ns
+			(1<<15) | (1<<13) | 63)); // 4096 brightness steps, SDO delay
 
 	// Here we should repeat setting configuration register several times
 	// at least number of LED1642.
@@ -614,7 +737,7 @@ static constexpr uint32_t interrupt_delay = 50;
 /**
  * maximum interrupt overrun count allowed before resetting the tick
  */
-static constexpr uint32_t max_overrun_count = 20;
+static constexpr uint32_t max_overrun_count = 2;
 
 static int last_overrun_phase;
 
@@ -676,9 +799,15 @@ static void led_init_timer()
 void led_init()
 {
 	led_init_gpio();
+	led_post();
 	led_init_spi_and_ledclock();
 	led_init_led1642();
 	led_init_timer();
+
+	for(int i = 0; i < 48; i++)
+		for(int j = 0; j < 64; j++)
+		get_current_frame_buffer().array()[i][j] = 0;
+
 }
 
 
@@ -744,6 +873,7 @@ static void step()
 
 #include "fonts/font_5x5.h"
 #include "fonts/font_bff.h"
+#include "fonts/font_aa.h"
 /*
 unsigned char PROGMEM op[][64] = {
 #include "op.inc"
@@ -761,19 +891,18 @@ void test_led_sel_row()
 	}
 */
 //
-//	for(int i = 0; i < 48; i++)
-//		for(int j = 0; j < 64; j++)
-//		frame_buffer[i][j] = 255;
+
 static int count = 0;
 if(count == 0)
 {
-	get_current_frame_buffer().draw_text(0, 0, 255, "a", font_bff);
-	get_current_frame_buffer().draw_text(0, 12, 255, "b", font_bff);
-	get_current_frame_buffer().draw_text(0, 24, 255, "c", font_bff);
-	get_current_frame_buffer().draw_text(0, 36, 255, "　-dee", font_bff);
+	get_current_frame_buffer().draw_text(0, 0, 255, "0123", font_large_digits);
+//	get_current_frame_buffer().draw_text(0, 12, 255, "b", font_bff);
+//	get_current_frame_buffer().draw_text(0, 24, 255, "c", font_bff);
+//	get_current_frame_buffer().draw_text(0, 36, 255, "　-dee", font_bff);
 
 	++count;
 }
+
 /*
 while(1)
 {
@@ -786,10 +915,11 @@ while(1)
 step();
 	for(int y = 0; y < 48; y++)
 	{
-		memcpy(frame_buffer[y], buffer[y] + 10, 128);
+		memcpy(get_current_frame_buffer().array()[y], buffer[y] + 10, 128);
 	}
 delay(10);
 */
+
 /*
 if(current_row == 0)
 {
@@ -799,11 +929,8 @@ if(current_row == 0)
 	{
 	step();
 	}
-
-	break;
 }
 
-}
 */
 
 
@@ -815,6 +942,8 @@ if(current_row == 0)
 		interrupt_count = 0;
 		interrupt_overrun = false;
 		next =millis() + 1000;
+		int n = analogRead(0);
+		Serial.printf("ambient : %d\r\n", n);
 
 
 	}

@@ -14,12 +14,12 @@ extern uint8_t buttons[MAX_BUTTONS];
 void button_update();
 
 
-#define BUTTON_LEFT   16
-#define BUTTON_UP     17
-#define BUTTON_DOWN   18
-#define BUTTON_RIGHT  19
-#define BUTTON_OK     20
-#define BUTTON_CANCEL 21
+#define BUTTON_LEFT   0
+#define BUTTON_UP     1
+#define BUTTON_DOWN   2
+#define BUTTON_RIGHT  3
+#define BUTTON_OK     4
+#define BUTTON_CANCEL 5
 
 #endif
 
