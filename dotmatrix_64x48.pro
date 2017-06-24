@@ -1,4 +1,4 @@
-update=2017年02月17日 13時56分58秒
+update=2017年06月23日 10時48分53秒
 version=1
 last_client=kicad
 [pcbnew]
@@ -70,9 +70,8 @@ LibName38=allegro
 LibName39=switches
 LibName40=pspice
 LibName41=transf
-LibName42=logo
-LibName43=relays
-LibName44=ttl_ieee
-LibName45=diode
-LibName46=wiznet
-LibName47=mechanical
+LibName42=relays
+LibName43=ttl_ieee
+LibName44=diode
+LibName45=wiznet
+LibName46=mechanical
