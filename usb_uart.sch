@@ -400,8 +400,6 @@ Wire Wire Line
 Wire Wire Line
 	2600 4500 2600 4300
 Connection ~ 2150 4300
-Text Label 1900 3350 0    60   ~ 0
-USBGND
 Wire Wire Line
 	6800 2850 6950 2850
 Wire Wire Line
@@ -424,4 +422,6 @@ Connection ~ 2650 3700
 Wire Wire Line
 	2650 3400 2650 3350
 Connection ~ 2650 3350
+Text Label 2800 4500 0    60   ~ 0
+GND
 $EndSCHEMATC
