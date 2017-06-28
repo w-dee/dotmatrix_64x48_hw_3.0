@@ -22,7 +22,7 @@ static uint8_t button_debounce_counter[MAX_BUTTONS] = {0};
 
 #define BUTTON_DEBOUNCE_COUNT 2
 #define BUTTON_INITIAL_REPEAT_DELAY 50
-#define BUTTON_REPEAT_LIMIT 60
+#define BUTTON_REPEAT_LIMIT 56
 
 
 /**
@@ -75,5 +75,13 @@ void button_update()
 
 }
 
-
+uint32_t button_get()
+{
+	uint32_t ret = 0;
+	for(int i = 0; i < MAX_BUTTONS; i++)
+	{
+		if(buttons[i]) ret |= (1<<i), buttons[i] = 0;
+	}
+	return ret;
+}
 

@@ -151,3 +151,25 @@ void frame_buffer_t::draw_text(int x, int y, int level, const char *s, const fon
 
 }
 
+void frame_buffer_t::fill(int level)
+{
+	for(int yy = 0; yy < LED_MAX_LOGICAL_ROW; ++yy)
+	{
+		for(int xx = 0; xx < LED_MAX_LOGICAL_COL; ++xx)
+		{
+			buffer[yy][xx] = level;
+		}
+	}
+}
+
+void frame_buffer_t::fill(int x, int y, int w, int h, int level)
+{
+	for(int yy = y; yy < y + h; ++yy)
+	{
+		for(int xx = x; xx < x + w; ++xx)
+		{
+			buffer[yy][xx] = level;
+		}
+	}
+}
+

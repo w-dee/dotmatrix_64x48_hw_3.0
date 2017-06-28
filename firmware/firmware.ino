@@ -11,7 +11,7 @@
 #include "ir_control.h"
 #include "bme280.h"
 #include "fonts/font_bff.h"
-
+#include "ui.h"
 
 
 #include "spiffs_api.h"
@@ -136,6 +136,7 @@ void setup(void){
 		font_bff.begin(BFF_FONT_FILE_START_ADDRESS);
 		Serial.printf("end font init\r\n");
 
+	ui_setup();
 }
 
 
@@ -150,6 +151,7 @@ void loop()
 	test_led_sel_row();
 	button_update();
 
+	ui_process();
 
 	if(init_state == 0 && millis() > 16000)
 	{
@@ -183,47 +185,6 @@ void loop()
 	{
 		server.handleClient();
 	}
-
-	if(buttons[BUTTON_OK])
-	{
-		Serial.println("BUTTON_OK");
-		buttons[BUTTON_OK] = 0;
-		ir_record();
-	}
-
-	if(buttons[BUTTON_CANCEL])
-	{
-		Serial.println("BUTTON_CANCEL");
-		buttons[BUTTON_CANCEL] = 0;
-		ir_replay();
-	}
-
-	if(buttons[BUTTON_UP])
-	{
-		Serial.println("BUTTON_UP");
-		buttons[BUTTON_UP] = 0;
-	  double temperature, humidity, pressure;
-	  uint8_t measuring, im_update;
-	  char s[64];
-	  bme280.getData(&temperature, &humidity, &pressure);
-	int temp = temperature * 10;
-	int hum = humidity;
-	int pre = pressure;
-	 
-	  sprintf(s, "Temperature: %d.%d C, Humidity: %d %%, Pressure: %d hPa\r\n",
-		      temp / 10, temp%10, hum, pre);
-	  Serial.print(s);
-
-	}
-
-	if(buttons[BUTTON_DOWN])
-	{
-		Serial.println("BUTTON_DOWN");
-		buttons[BUTTON_DOWN] = 0;
-		int n = analogRead(0);
-		Serial.printf("ambient : %d\r\n", n);
-	}
-
 	{
 		static ir_status_t last_ir_status = (ir_status_t)-1;
 		ir_status_t new_ir_status = ir_get_status();

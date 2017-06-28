@@ -47,7 +47,14 @@ public:
 			draw_text(x, y, level, s.c_str(), font);
 	}
 
-	void draw_text(int x, int y, int level, const char *s, const font_base_t & font); 
+	void draw_text(int x, int y, int level, const char *s, const font_base_t & font);
+
+
+	//! fill all region with specified value
+	void fill(int level);
+
+	//! fill specified region with specified value
+	void fill(int x, int y, int w, int h, int level);
 };
 
 
