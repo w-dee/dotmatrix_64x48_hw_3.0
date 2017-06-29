@@ -37,10 +37,16 @@ FS SPIFFS = FS(FSImplPtr(new SPIFFSImpl(
                              SPIFFS_MAX_OPEN_FILES)));
 
 
+FS SETTINGS_SPIFFS = FS(FSImplPtr(new SPIFFSImpl(
+							SPIFFS_PHYS_ADDR + SPIFFS_PHYS_SIZE,
+							SETTINGS_SPIFFS_SIZE,
+                            SPIFFS_PHYS_PAGE,
+                            SPIFFS_PHYS_BLOCK,
+                            1)));
 
 
 
-
+extern "C" {  size_t xPortGetFreeHeapSize(); }
 
 #define WIRE_SDA 0
 #define WIRE_SCL 5
@@ -122,8 +128,10 @@ void setup(void){
 	Serial.printf("%08x\r\n", *reinterpret_cast<uint32_t*>(1024*1024 + 0x40200000));
 
 		FSInfo info;
+
 		SPIFFS.begin();
 		SPIFFS.info(info);
+		Serial.printf("Main SPIFFS\r\n");
 		Serial.printf("totalBytes    : %d\r\n", info.totalBytes);
 		Serial.printf("usedBytes     : %d\r\n", info.usedBytes);
 		Serial.printf("blockSize     : %d\r\n", info.blockSize);
@@ -131,6 +139,17 @@ void setup(void){
 		Serial.printf("maxOpenFiles  : %d\r\n", info.maxOpenFiles);
 		Serial.printf("maxPathLength : %d\r\n", info.maxPathLength);
 
+		SETTINGS_SPIFFS.begin();
+		SETTINGS_SPIFFS.info(info);
+		Serial.printf("Settings SPIFFS\r\n");
+		Serial.printf("totalBytes    : %d\r\n", info.totalBytes);
+		Serial.printf("usedBytes     : %d\r\n", info.usedBytes);
+		Serial.printf("blockSize     : %d\r\n", info.blockSize);
+		Serial.printf("pageSize      : %d\r\n", info.pageSize);
+		Serial.printf("maxOpenFiles  : %d\r\n", info.maxOpenFiles);
+		Serial.printf("maxPathLength : %d\r\n", info.maxPathLength);
+
+		Serial.printf("\r\n""PortGetFreeHeapSize: %d\r\n", xPortGetFreeHeapSize());
 
 		Serial.printf("begin font init\r\n");
 		font_bff.begin(BFF_FONT_FILE_START_ADDRESS);
