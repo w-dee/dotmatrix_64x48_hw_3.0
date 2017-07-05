@@ -12,7 +12,7 @@
 #include "bme280.h"
 #include "fonts/font_bff.h"
 #include "ui.h"
-
+#include "settings.h"
 
 #include "spiffs_api.h"
 extern "C" uint32_t _SPIFFS_start;
@@ -95,28 +95,33 @@ void setup(void){
 
 
 			},[](){
-			  HTTPUpload& upload = server.upload();
-			  if(upload.status == UPLOAD_FILE_START){
-				Serial.setDebugOutput(true);
-				WiFiUDP::stopAll();
-				Serial.printf("Update: %s\n", upload.filename.c_str());
-				uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
-				if(!Update.begin(maxSketchSpace)){//start with max available size
-				  Update.printError(Serial);
+
+				HTTPUpload& upload = server.upload();
+				if(upload.status == UPLOAD_FILE_START){
+
+					Serial.setDebugOutput(true);
+					WiFiUDP::stopAll();
+					Serial.printf("Update: %s\n", upload.filename.c_str());
+					uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
+					if(!Update.begin(maxSketchSpace)){//start with max available size
+					  Update.printError(Serial);
+					}
+				} else if(upload.status == UPLOAD_FILE_WRITE){
+
+					if(Update.write(upload.buf, upload.currentSize) != upload.currentSize){
+					  Update.printError(Serial);
+					}
+				} else if(upload.status == UPLOAD_FILE_END){
+
+					if(Update.end(true)){ //true to set the size to the current progress
+					  Serial.printf("Update Success: %u\nRebooting...\n", upload.totalSize);
+					} else {
+					  Update.printError(Serial);
+					}
+					Serial.setDebugOutput(false);
 				}
-			  } else if(upload.status == UPLOAD_FILE_WRITE){
-				if(Update.write(upload.buf, upload.currentSize) != upload.currentSize){
-				  Update.printError(Serial);
-				}
-			  } else if(upload.status == UPLOAD_FILE_END){
-				if(Update.end(true)){ //true to set the size to the current progress
-				  Serial.printf("Update Success: %u\nRebooting...\n", upload.totalSize);
-				} else {
-				  Update.printError(Serial);
-				}
-				Serial.setDebugOutput(false);
-			  }
-			  yield();
+				yield();
+
 			});
 
 
@@ -156,6 +161,13 @@ void setup(void){
 		Serial.printf("end font init\r\n");
 
 	ui_setup();
+
+
+//	settings_write(F("test"), F("test_content"));
+	String r;
+	settings_read(F("test"), r);
+	Serial.printf("read: \"%s\"\r\n", r.c_str());
+
 }
 
 

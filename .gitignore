@@ -33,4 +33,5 @@ hardware/gerber/*.zip
 
 *.xcf
 firmware.bin
+combined_rom.bin
 

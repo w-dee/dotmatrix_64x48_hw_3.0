@@ -18,15 +18,15 @@ FLASH_DEF = 4M3M
 # ------------------------------
 # 0        0.5M         Program text
 # 0.5M     0.5M         Program text (shadow, for OTA update)
-# 1M       0.5M         Main SPIFFS content and scratch pad
-# 1.5M     0.5M         SPIFFS for settings data
+# 1M       896k         Main SPIFFS content and scratch pad
+# 1920k    128k         SPIFFS for settings data
 # 2M       2M           Bitmap font
 
 # don't use builtin SPIFFS global instance; 
 # we use special constructor which shrinks main SPIFFS
 
-MY_SPIFFS_SIZE=0x80000
-SETTINGS_SPIFFS_SIZE=0x80000
+MY_SPIFFS_SIZE=917504
+SETTINGS_SPIFFS_SIZE=131072
 SETTINGS_FS_IMAGE=settings_fs.spiffs
 
 BFF_FONT_FILE_NAME=fonts/takaop.bff
@@ -39,5 +39,11 @@ BUILD_EXTRA_FLAGS += -DNO_GLOBAL_SPIFFS -DMY_SPIFFS_SIZE=$(MY_SPIFFS_SIZE) \
 
 # shrink continuation stack size from 4kB to 2kB
 CONT_STACKSIZE = 2048
+
+
+# combined rom image
+COMBINED_ROM_IMAGE=combined_rom.bin
+
+
 
 
