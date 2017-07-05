@@ -98,7 +98,7 @@ static void led_post_set_led1642_config()
  */
 static void led_post()
 {
-	delay(4000);
+	delay(3000);
 	// this check uses GPIO, not SPI hardware.
 
 	// set SDO delay; see also led_init_led1642() description

@@ -1,10 +1,9 @@
 #include <ESP8266WiFi.h>
-#include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include <Wire.h>
 #include <FS.h>
 
-#include "../../../../.config/ssid.h"
+#include SSID_H
 
 #include "matrix_drive.h"
 #include "buttons.h"
@@ -13,6 +12,7 @@
 #include "fonts/font_bff.h"
 #include "ui.h"
 #include "settings.h"
+#include "web_server.h"
 
 #include "spiffs_api.h"
 extern "C" uint32_t _SPIFFS_start;
@@ -38,7 +38,7 @@ FS SPIFFS = FS(FSImplPtr(new SPIFFSImpl(
 
 
 FS SETTINGS_SPIFFS = FS(FSImplPtr(new SPIFFSImpl(
-							SPIFFS_PHYS_ADDR + SPIFFS_PHYS_SIZE,
+							SETTINGS_SPIFFS_START,
 							SETTINGS_SPIFFS_SIZE,
                             SPIFFS_PHYS_PAGE,
                             SPIFFS_PHYS_BLOCK,
@@ -53,9 +53,6 @@ extern "C" {  size_t xPortGetFreeHeapSize(); }
 
 BME280 bme280;
 
-ESP8266WebServer server(80);
-
-const char* serverIndex = "5<form method='POST' action='/update' enctype='multipart/form-data'><input type='file' name='update'><input type='submit' value='Update'></form>";
 
 
 extern uint32_t _SPIFFS_start;
@@ -76,89 +73,43 @@ void setup(void){
   bme280.setMode(BME280_MODE_NORMAL, BME280_TSB_1000MS, BME280_OSRS_x1, BME280_OSRS_x1, BME280_OSRS_x1, BME280_FILTER_OFF);
 
 
-		  if (MDNS.begin("esp8266")) {
-			Serial.println("MDNS responder started");
-		  }
+	  if (MDNS.begin("esp8266")) {
+		Serial.println("MDNS responder started");
+	  }
 
-
-
-			server.on("/", HTTP_GET, [](){
-			  server.sendHeader("Connection", "close");
-			  server.send(200, "text/html", serverIndex);
-			});
-			server.on("/update", HTTP_POST, [](){
-			  server.sendHeader("Connection", "close");
-			  server.send(200, "text/plain", (Update.hasError())?"FAIL":"OK");
-
-			timer0_detachInterrupt();
-			  ESP.restart();
-
-
-			},[](){
-
-				HTTPUpload& upload = server.upload();
-				if(upload.status == UPLOAD_FILE_START){
-
-					Serial.setDebugOutput(true);
-					WiFiUDP::stopAll();
-					Serial.printf("Update: %s\n", upload.filename.c_str());
-					uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
-					if(!Update.begin(maxSketchSpace)){//start with max available size
-					  Update.printError(Serial);
-					}
-				} else if(upload.status == UPLOAD_FILE_WRITE){
-
-					if(Update.write(upload.buf, upload.currentSize) != upload.currentSize){
-					  Update.printError(Serial);
-					}
-				} else if(upload.status == UPLOAD_FILE_END){
-
-					if(Update.end(true)){ //true to set the size to the current progress
-					  Serial.printf("Update Success: %u\nRebooting...\n", upload.totalSize);
-					} else {
-					  Update.printError(Serial);
-					}
-					Serial.setDebugOutput(false);
-				}
-				yield();
-
-			});
-
-
-	  server.begin();
-	  Serial.println("HTTP server started");
+	web_server_setup();
 
 	Serial.printf("Flash size : %d %08x\r\n", ESP.getFlashChipSize(), (uint32_t)_SPIFFS_start);
 
-	Serial.printf("%08x\r\n", *reinterpret_cast<uint32_t*>(1024*1024 + 0x40200000));
+	Serial.printf("%08x\r\n", *reinterpret_cast<uint32_t*>(BFF_FONT_FILE_START_ADDRESS + 0x40200000));
 
-		FSInfo info;
+	FSInfo info;
 
-		SPIFFS.begin();
-		SPIFFS.info(info);
-		Serial.printf("Main SPIFFS\r\n");
-		Serial.printf("totalBytes    : %d\r\n", info.totalBytes);
-		Serial.printf("usedBytes     : %d\r\n", info.usedBytes);
-		Serial.printf("blockSize     : %d\r\n", info.blockSize);
-		Serial.printf("pageSize      : %d\r\n", info.pageSize);
-		Serial.printf("maxOpenFiles  : %d\r\n", info.maxOpenFiles);
-		Serial.printf("maxPathLength : %d\r\n", info.maxPathLength);
+	SPIFFS.begin();
+	SPIFFS.info(info);
+	Serial.printf("Main SPIFFS\r\n");
+	Serial.printf("totalBytes    : %d\r\n", info.totalBytes);
+	Serial.printf("usedBytes     : %d\r\n", info.usedBytes);
+	Serial.printf("blockSize     : %d\r\n", info.blockSize);
+	Serial.printf("pageSize      : %d\r\n", info.pageSize);
+	Serial.printf("maxOpenFiles  : %d\r\n", info.maxOpenFiles);
+	Serial.printf("maxPathLength : %d\r\n", info.maxPathLength);
 
-		SETTINGS_SPIFFS.begin();
-		SETTINGS_SPIFFS.info(info);
-		Serial.printf("Settings SPIFFS\r\n");
-		Serial.printf("totalBytes    : %d\r\n", info.totalBytes);
-		Serial.printf("usedBytes     : %d\r\n", info.usedBytes);
-		Serial.printf("blockSize     : %d\r\n", info.blockSize);
-		Serial.printf("pageSize      : %d\r\n", info.pageSize);
-		Serial.printf("maxOpenFiles  : %d\r\n", info.maxOpenFiles);
-		Serial.printf("maxPathLength : %d\r\n", info.maxPathLength);
+	SETTINGS_SPIFFS.begin();
+	SETTINGS_SPIFFS.info(info);
+	Serial.printf("Settings SPIFFS\r\n");
+	Serial.printf("totalBytes    : %d\r\n", info.totalBytes);
+	Serial.printf("usedBytes     : %d\r\n", info.usedBytes);
+	Serial.printf("blockSize     : %d\r\n", info.blockSize);
+	Serial.printf("pageSize      : %d\r\n", info.pageSize);
+	Serial.printf("maxOpenFiles  : %d\r\n", info.maxOpenFiles);
+	Serial.printf("maxPathLength : %d\r\n", info.maxPathLength);
 
-		Serial.printf("\r\n""PortGetFreeHeapSize: %d\r\n", xPortGetFreeHeapSize());
+	Serial.printf("\r\n""PortGetFreeHeapSize: %d\r\n", xPortGetFreeHeapSize());
 
-		Serial.printf("begin font init\r\n");
-		font_bff.begin(BFF_FONT_FILE_START_ADDRESS);
-		Serial.printf("end font init\r\n");
+	Serial.printf("begin font init\r\n");
+	font_bff.begin(BFF_FONT_FILE_START_ADDRESS);
+	Serial.printf("end font init\r\n");
 
 	ui_setup();
 
@@ -184,7 +135,7 @@ void loop()
 
 	ui_process();
 
-	if(init_state == 0 && millis() > 16000)
+	if(init_state == 0 && millis() > 4000)
 	{
 		init_state = 1;
 		Serial.println("connecting ...\r\n"); 
@@ -202,7 +153,7 @@ void loop()
 			init_state = 2;
 
 		  Serial.println("");
-		  Serial.print("Connected to ");
+		  Serial.print("N Connected to ");
 		  Serial.println(ssid);
 		  Serial.print("IP address: ");
 		  Serial.println(WiFi.localIP());
@@ -214,7 +165,7 @@ void loop()
 
 	if(init_state == 2)
 	{
-		server.handleClient();
+		web_server_handle_client();
 	}
 	{
 		static ir_status_t last_ir_status = (ir_status_t)-1;

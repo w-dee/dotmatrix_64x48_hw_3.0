@@ -8,15 +8,56 @@ extern "C" {
 #include "frame_buffer.h"
 
 // to make the world simple, I choosed to use continuation.
-// it's a bit itchy that cont_t uses 2kB of RAM, it's too large for
+// it's a bit itchy that cont_t uses 4kB of RAM, it's too large for
 // ui coroutine.
-// CONT_STACKSIZE was (SDK's default) 4kB, now shrinked to 2kB.
-static cont_t cont;
+// so I wrote own coroutine struct borrowed from cont_util.c.
+
+#define UI_CONT_STACK_SIZE 256
+
+// keep this struct layout the same as cont_t except for stack size
+struct ui_cont_t {
+        void (*pc_ret)(void);
+        unsigned* sp_ret;
+
+        void (*pc_yield)(void);
+        unsigned* sp_yield;
+
+        unsigned* stack_end;
+        unsigned unused1;
+        unsigned unused2;
+        unsigned stack_guard1;
+
+        unsigned stack[UI_CONT_STACK_SIZE / 4];
+
+        unsigned stack_guard2;
+        unsigned* struct_start;
+};
+
+
+static ui_cont_t cont;
+
+
+#define CONT_STACKGUARD 0xefffeffeu
+static void ui_cont_init(ui_cont_t * cont)
+{
+	memset(cont, 0, sizeof(*cont));
+    cont->stack_guard1 = CONT_STACKGUARD;
+    cont->stack_guard2 = CONT_STACKGUARD;
+    cont->stack_end = cont->stack + (sizeof(cont->stack) / 4);
+    cont->struct_start = (unsigned*) cont;
+}
 
 static void ui_yield()
 {
-	cont_yield(&cont);
+	cont_yield(reinterpret_cast<cont_t*>(&cont));
 }
+
+static int ui_cont_check(ui_cont_t* cont) {
+    if(cont->stack_guard1 != CONT_STACKGUARD || cont->stack_guard2 != CONT_STACKGUARD) return 1;
+
+    return 0;
+}
+
 
 
 
@@ -125,10 +166,14 @@ static void ui_loop()
 
 void ui_setup()
 {
-	cont_init(&cont);
+	ui_cont_init(&cont);
 }
 
 void ui_process()
 {
-	cont_run(&cont, &ui_loop);
+	cont_run(reinterpret_cast<cont_t*>(&cont), &ui_loop);
+	if(ui_cont_check(&cont))
+	{
+		Serial.println("ERROR: UI continuation stack exhausted!!!");
+	}
 }
