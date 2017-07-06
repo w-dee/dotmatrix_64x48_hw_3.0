@@ -64,6 +64,7 @@ extern frame_buffer_t & current_frame_buffer;
 
 static inline ICACHE_RAM_ATTR frame_buffer_t & get_current_frame_buffer() { return current_frame_buffer;}
 
-
+//! swap current frame buffer
+void frame_buffer_flip();
 
 #endif

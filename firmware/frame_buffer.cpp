@@ -173,3 +173,10 @@ void frame_buffer_t::fill(int x, int y, int w, int h, int level)
 	}
 }
 
+void frame_buffer_flip()
+{
+	if(&current_frame_buffer == buffers + 0)
+		current_frame_buffer = buffers[1];
+	else
+		current_frame_buffer = buffers[0];
+}

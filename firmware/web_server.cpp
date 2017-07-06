@@ -55,14 +55,14 @@ static void web_server_ota_upload_handler()
 
 	HTTPUpload& upload = server.upload();
 	if(upload.status == UPLOAD_FILE_START){
-
+		I2STXF = 0; // DISABLE LED PWM clock // TODO: encapslation
 		Serial.setDebugOutput(true);
 		WiFiUDP::stopAll();
 		Serial.printf_P(PSTR("Update: %s\n"), upload.filename.c_str());
 		ota_status = ota_header;
 	} else if(upload.status == UPLOAD_FILE_WRITE){
 		static_assert(HTTP_UPLOAD_BUFLEN == 2048, "HTTP_UPLOAD_BUFLEN must be 2048");
-
+		Serial.printf(".");
 		// we assume that the upload content comes by unit of each 2048 byte block.
 		const header_t *pheader = reinterpret_cast<const header_t*>
 			(upload.buf);
@@ -71,6 +71,17 @@ static void web_server_ota_upload_handler()
 		if(ota_status == ota_header)
 		{
 			Serial.print(F("\r\n"));
+			if(pheader->magic == 0x50 &&
+				pheader->dum1[0] == 0x4b &&
+				pheader->dum1[1] == 0x03 &&
+				pheader->dum1[2] == 0x04)
+			{
+				LastOTAError.print(F("Invalid header. The file seems to be a ZIP file. Please unzip it first.\r\n"));
+				Serial.println(LastOTAError.c_str());
+				ota_status = ota_fail; // invalid header
+				return;
+			}
+				
 			if(pheader->magic != 0xea ||
 				pheader->dum1[0] != ' ' ||
 				pheader->dum1[1] != 'P' ||
@@ -88,7 +99,6 @@ static void web_server_ota_upload_handler()
 			Serial.printf_P(PSTR("pheader->length: %u\r\n"), pheader->length);
 			Serial.printf_P(PSTR("pheader->block_count: %u\r\n"), pheader->block_count);
 
-		
 
 			if(pheader->partition == 'M')
 			{

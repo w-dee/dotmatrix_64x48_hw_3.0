@@ -1,116 +1,183 @@
 #include <Arduino.h>
-extern "C" {
-#include <cont.h>
-}
+#include <vector>
+#include <algorithm>
 #include "ui.h"
 #include "ir_control.h"
 #include "buttons.h"
 #include "frame_buffer.h"
 
-// to make the world simple, I choosed to use continuation.
-// it's a bit itchy that cont_t uses 4kB of RAM, it's too large for
-// ui coroutine.
-// so I wrote own coroutine struct borrowed from cont_util.c.
+enum transition_t { t_none };
 
-#define UI_CONT_STACK_SIZE 256
 
-// keep this struct layout the same as cont_t except for stack size
-struct ui_cont_t {
-        void (*pc_ret)(void);
-        unsigned* sp_ret;
+class screen_base_t
+{
+public:
+	//! The constructor
+	screen_base_t() {;}
 
-        void (*pc_yield)(void);
-        unsigned* sp_yield;
+	//! The destructor
+	virtual ~screen_base_t() {;}
 
-        unsigned* stack_end;
-        unsigned unused1;
-        unsigned unused2;
-        unsigned stack_guard1;
+	//! Called when a button is pushed
+	virtual void on_button(uint32_t button) {;}
 
-        unsigned stack[UI_CONT_STACK_SIZE / 4];
+	//! Repeatedly called 10ms intervally when the screen is active
+	virtual void on_idle() {;}
 
-        unsigned stack_guard2;
-        unsigned* struct_start;
+	//! Call this when the screen content is written and need to be showed
+	void show(transition_t transition = t_none);
+
+	//! Call this when the screen needs to be closed
+	void close();
+	
+
+private:
+
+//	friend class screen_manager_t;
 };
 
-
-static ui_cont_t cont;
-
-
-#define CONT_STACKGUARD 0xefffeffeu
-static void ui_cont_init(ui_cont_t * cont)
+class screen_manager_t
 {
-	memset(cont, 0, sizeof(*cont));
-    cont->stack_guard1 = CONT_STACKGUARD;
-    cont->stack_guard2 = CONT_STACKGUARD;
-    cont->stack_end = cont->stack + (sizeof(cont->stack) / 4);
-    cont->struct_start = (unsigned*) cont;
-}
+	transition_t transition; //!< current running transition
+	bool in_transition; //! whether the transition is under progress
+	uint32_t next_check;
+	std::vector<screen_base_t *> stack;
+	bool stack_changed;
 
-static void ui_yield()
+public:
+	screen_manager_t() { transition = t_none; in_transition = false; stack_changed = false;}
+
+	void show(transition_t tran)
+	{
+		transition = tran;
+		if(transition == t_none)
+		{
+			// immediate show
+			frame_buffer_flip();
+		}
+	}
+
+	void push(screen_base_t * screen)
+	{
+		stack.push_back(screen);
+		stack_changed = true;
+	}
+
+	void close(screen_base_t * screen)
+	{
+		std::vector<screen_base_t *>::iterator it =
+			std::find(stack.begin(), stack.end(), screen);
+		if(it != stack.end())
+		{
+			stack.erase(it);
+			stack_changed = true;
+		}
+	}
+
+	void pop()
+	{
+		if(stack.size())
+		{
+			delete stack[stack.size() - 1];
+			stack.pop_back();
+			stack_changed = true;
+		}
+	}
+
+	void process()
+	{
+		uint32_t now = millis();
+		if((int32_t)(now - next_check) > 0)
+		{
+			size_t sz = stack.size();
+			if(sz)
+			{
+				if(!in_transition)
+				{
+					stack_changed = false;
+					screen_base_t *top = stack[sz -1];
+
+					// dispatch button event
+					uint32_t buttons = button_get();
+					for(uint32_t i = 1; i; i <<= 1)
+						if(buttons & i) top->on_button(i);
+
+					// care must be taken,
+					// the screen may be poped (removed) during button event
+					if(!stack_changed)
+					{
+						// dispatch idle event
+						top->on_idle();
+					}
+				}
+			}
+			next_check += 10;
+			if((int32_t)(now - next_check) > 0)
+				next_check = now + 10; // still in past; reset next_check
+		}
+	}
+};
+
+static screen_manager_t screen_manager;
+
+void screen_base_t::show(transition_t transition)
 {
-	cont_yield(reinterpret_cast<cont_t*>(&cont));
+	screen_manager.show(transition);
 }
 
-static int ui_cont_check(ui_cont_t* cont) {
-    if(cont->stack_guard1 != CONT_STACKGUARD || cont->stack_guard2 != CONT_STACKGUARD) return 1;
-
-    return 0;
+void screen_base_t::close()
+{
+	screen_manager.close(this);
 }
-
-
 
 
 //! led test ui
-static void ui_led_test()
+class screen_led_test_t : public screen_base_t
 {
+	
 	int x = -1;
 	int y = -1;
-	for(;;)
+
+	void on_button(uint32_t button)
 	{
-		ui_yield();
-
-
-		uint32_t buttons = button_get();
-
-		if(buttons & BUTTON_OK)
+		switch(button)
 		{
+		case BUTTON_OK:
 			// ok button; return
 			return;
-		}
 
-		if(buttons & BUTTON_CANCEL)
-		{
+		case BUTTON_CANCEL:
 			// fill framebuffer with 0xff
 			get_current_frame_buffer().fill(0xff);
-		}
+			return;
 
-		if(buttons & (BUTTON_LEFT|BUTTON_RIGHT))
-		{
+		case BUTTON_LEFT:
+		case BUTTON_RIGHT:
 			// vertical line test
-			if(buttons & BUTTON_LEFT) --x;
-			if(buttons & BUTTON_RIGHT) ++x;
+			if(button == BUTTON_LEFT) --x;
+			if(button == BUTTON_RIGHT) ++x;
 			if(x < 0) x = 0;
 			if(x >= LED_MAX_LOGICAL_COL) x = LED_MAX_LOGICAL_COL - 1;
 			get_current_frame_buffer().fill(0);
 			get_current_frame_buffer().fill(x, 0, 1, LED_MAX_LOGICAL_ROW, 0xff);
-		}
+			return;
 
-		if(buttons &  (BUTTON_UP|BUTTON_DOWN))
-		{
+		case BUTTON_UP:
+		case BUTTON_DOWN:
 			// horizontal line test
-			if(buttons & BUTTON_UP) --y;
-			if(buttons & BUTTON_DOWN) ++y;
+			if(button == BUTTON_UP) --y;
+			if(button == BUTTON_DOWN) ++y;
 			if(y < 0) y = 0;
 			if(y >= LED_MAX_LOGICAL_ROW) y = LED_MAX_LOGICAL_ROW - 1;
 			get_current_frame_buffer().fill(0);
 			get_current_frame_buffer().fill(0, y, LED_MAX_LOGICAL_COL, 1, 0xff);
+			return;
 		}
 
 	}
-}
+};
 
-
+#if 0
 static void ui_loop()
 {
 	for(;;)
@@ -162,18 +229,14 @@ static void ui_loop()
 */
 	}
 }
-
+#endif
 
 void ui_setup()
 {
-	ui_cont_init(&cont);
+	screen_manager.push(new screen_led_test_t());
 }
 
 void ui_process()
 {
-	cont_run(reinterpret_cast<cont_t*>(&cont), &ui_loop);
-	if(ui_cont_check(&cont))
-	{
-		Serial.println("ERROR: UI continuation stack exhausted!!!");
-	}
+	screen_manager.process();
 }
