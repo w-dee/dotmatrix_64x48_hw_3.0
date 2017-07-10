@@ -5,6 +5,7 @@
 #include "ir_control.h"
 #include "buttons.h"
 #include "frame_buffer.h"
+#include "matrix_drive.h"
 
 enum transition_t { t_none };
 
@@ -144,6 +145,7 @@ class screen_led_test_t : public screen_base_t
 		{
 		case BUTTON_OK:
 			// ok button; return
+			get_current_frame_buffer().fill(0x00);
 			return;
 
 		case BUTTON_CANCEL:
@@ -171,6 +173,43 @@ class screen_led_test_t : public screen_base_t
 			if(y >= LED_MAX_LOGICAL_ROW) y = LED_MAX_LOGICAL_ROW - 1;
 			get_current_frame_buffer().fill(0);
 			get_current_frame_buffer().fill(0, y, LED_MAX_LOGICAL_COL, 1, 0xff);
+			return;
+		}
+
+	}
+};
+
+//! channel test ui
+class screen_channel_test_t : public screen_base_t
+{
+	int div = 0;
+
+	void on_button(uint32_t button)
+	{
+		switch(button)
+		{
+		case BUTTON_OK:
+			// ok button; return
+			return;
+
+		case BUTTON_CANCEL:
+			// fill framebuffer with 0xff
+			return;
+
+		case BUTTON_LEFT:
+		case BUTTON_RIGHT:
+			// vertical line test
+			if(button == BUTTON_LEFT) --div;
+			if(button == BUTTON_RIGHT) ++div;
+			if(div < 0) div = 0;
+			if(div >= LED_NUM_INTERVAL_MODE) div = LED_NUM_INTERVAL_MODE - 1;
+			led_set_interval_mode(div);
+			get_current_frame_buffer().fill(0, 0, 5, 1, 0);
+			get_current_frame_buffer().fill(0, 0, div + 1, 1, 0xff);
+			return;
+
+		case BUTTON_UP:
+		case BUTTON_DOWN:
 			return;
 		}
 
@@ -233,7 +272,7 @@ static void ui_loop()
 
 void ui_setup()
 {
-	screen_manager.push(new screen_led_test_t());
+	screen_manager.push(new screen_channel_test_t());
 }
 
 void ui_process()

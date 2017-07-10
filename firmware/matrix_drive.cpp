@@ -3,6 +3,7 @@
 #include "eagle_soc.h"
 #include <ESP8266WiFi.h>
 #include "frame_buffer.h"
+#include "matrix_drive.h"
 
 #define LED_COL_SER_GPIO 13 // 13=MOSI
 #define LED_COL_LATCH_GPIO 12 // 12=MISO, but in DIO mode, it acts as second line of MOSI
@@ -164,6 +165,66 @@ static void led_post()
 	}
 }
 
+static int led_pwm_current_div = 0;
+static uint32_t led_pwm_current_pattern = 0;
+static bool led_pwm_clock_running; //!< whether the LED PWM clock is running or not
+
+#define SLOW_CLOCK_DIV 0x3f
+#define SLOW_BCK_DIV 5
+
+/**
+ * Set SPI hardware clock division
+ */
+static void _set_i2s_div()
+{
+	uint32_t i2s_clock_div =
+		(led_pwm_clock_running?led_pwm_current_div:SLOW_CLOCK_DIV) & I2SCDM;
+	uint8_t i2s_bck_div = (led_pwm_clock_running?1:SLOW_BCK_DIV) & I2SBDM;
+
+	//!trans master, !bits mod, rece slave mod, rece msb shift, right first, msb right
+	I2SC &= ~(I2STSM | (I2SBMM << I2SBM) | (I2SBDM << I2SBD) | (I2SCDM << I2SCD));
+	I2SC |= I2SRF | I2SMR | I2SRSM | I2SRMS | ((i2s_bck_div) << I2SBD) | ((i2s_clock_div) << I2SCD);
+
+	// pattern
+	I2STXF = (led_pwm_clock_running?led_pwm_current_pattern:0xaaaaaaaa);
+
+}
+
+/**
+ * Set SPI hardware clock division
+ */
+static void set_i2s_div_pat(int div, uint32_t pat)
+{
+	led_pwm_current_div = div;
+	led_pwm_current_pattern = pat;
+	_set_i2s_div();
+}
+
+/**
+ * Start LED PWM clock
+ */
+void led_start_pwm_clock()
+{
+	led_pwm_clock_running = true;
+	_set_i2s_div();
+}
+
+/**
+ * Stop LED PWM clock.
+ * This function does not actually stop the clock;
+ * Just slow down the clock to the rate which will not interfere with WiFi.
+ * Because with LED1642's maximum possible brighness of 4095,
+ * when internal clock counter being 4095, there is rarely possiblity of
+ * showing blank if the brighness is maximum if the internal counter stops
+ * at maximum value. Since internal clock counter is not readable,
+ * I decided feeding the clock insteadof stopping it, but at very slow rate
+ * with will not interfere with WiFi.
+ */
+void led_stop_pwm_clock()
+{
+	led_pwm_clock_running = false;
+	_set_i2s_div();
+}
 
 /**
  * Initialize SPI hardware and clock generator for LED1642
@@ -173,7 +234,7 @@ static void led_init_spi_and_ledclock()
 	// setup hardware SPI
 	SPI.begin();
 	SPI.setHwCs(false);
-	SPI.setFrequency((int)11428571);
+	SPI.setFrequency((int)20000000);
 	SPI1U = SPIUMOSI | SPIUSSE | SPIUFWDUAL;
 	SPI1C |= SPICFASTRD | SPICDOUT; // use DIO
 	SPI1C &= ~(SPICWBO | SPICRBO); // MSB first
@@ -193,35 +254,15 @@ static void led_init_spi_and_ledclock()
 	I2SFC &= ~(I2SDE | (I2STXFMM << I2STXFM) | (I2SRXFMM << I2SRXFM)); //Set RX/TX FIFO_MOD=0 and disable DMA (FIFO only)
 	I2SCC &= ~((I2STXCMM << I2STXCM) | (I2SRXCMM << I2SRXCM)); //Set RX/TX CHAN_MOD=0
 
-	// I2S clock freq is: 160000000.0 / 2 / 1 = 80MHz
-	uint32_t i2s_clock_div = 2 & I2SCDM;
-	uint8_t i2s_bck_div = 1 & I2SBDM;
-
-	//!trans master, !bits mod, rece slave mod, rece msb shift, right first, msb right
-	I2SC &= ~(I2STSM | (I2SBMM << I2SBM) | (I2SBDM << I2SBD) | (I2SCDM << I2SCD));
-	I2SC |= I2SRF | I2SMR | I2SRSM | I2SRMS | ((i2s_bck_div) << I2SBD) | ((i2s_clock_div) << I2SCD);
-
-	// write FIFO pattern
-	// 8 rising edge in 32bit, and the clock is 80MHz, thus the output is 20MHz.
-	// we add an intended jitter (spread spectrum; SS) to the pattern, to reduce EMI.
-	// the I2S hardware in ESP8266 will repeat this pattern.
-
-	// BUT,
-	// It seems the WiFi functionality works better if the SS is not used;
-	// Maybe non-ideal quick and dirty SS is worse than the non-SS signal. sigh.
-	I2STXF = 0
-//			|0b11100011010010100000100001110110 // ~~ -6db peak reduction compared to 0b11001100...
-//			|0b11100110010010010000100001100100 // more L than above; for pull-uped output
-			|0b11001100110011001100110011001100 // no SS pattern
-//			|0xf0f0f0f0 // no SS pattern
-//			|0xffff0000 // no SS pattern
-//			|0xaaaaaaaa
-	;
+	// I2S clock freq is: 160000000.0 / div / 1
+	set_i2s_div_pat(4, 0xaaaaaaaa); // just for initial value
 
 	// start I2S
 	I2SC |= I2STXS; //Start transmission
 
 }
+
+
 /**
  * Set SPI transaction length
  */
@@ -428,28 +469,119 @@ static constexpr int max_phase = 12; //!< phase count
 /**
  * timer counter value
  */
-
-static constexpr int32_t timer_interval = 32768; //!< timer hsync interval in 80MHz cycle
-static constexpr int32_t timer_duration_phase[max_phase] = //!< timer duration of each phase
+struct timer_interval_values_t
+{
+	int32_t freq_div; //!< frequency division value
+	uint32_t clock_pattern; //!< bit pattern of the clock
+	int32_t timer_interval;//!< timer hsync interval in 80MHz cycle
+	int32_t timer_duration_phase[max_phase];//!< timer duration of each phase
+};
+static constexpr timer_interval_values_t timer_interval_values[LED_NUM_INTERVAL_MODE] =
+{
 	{
-2700	,
-2968	,
-2700	,
-2700	,
-2700	,
-2700	,
-2700	,
-2700	,
-2700	,
-2700	,
-2900	,
-2600	,
+		3,
+		0xaaaaaaaa,
+		36864,
+		{
+			3000,
+			3000,
+			3864,
+			3000,
+			3000,
+			3000,
+			3000,
+			3000,
+			3000,
+			3000,
+			3000,
+			3000,
 
-	};
-static constexpr int phase_sum(int index) { return index == -1 ? 0 : timer_duration_phase[index] + phase_sum(index-1); }
-static_assert(phase_sum(max_phase-1) == timer_interval, "timer_interval sum mismatch");
+		}
+	},
+	{
+		5,
+		0xaaaaaaaa,
+		40960,
+		{
+			3300,
+			3860,
+			3300,
+			3300,
+			3400,
+			3400,
+			3400,
+			3400,
+			3400,
+			3400,
+			3400,
+			3400,
+		}
+	},
+	{
+		6,
+		0xaaaaaaaa,
+		36864,
+		{
+			3000,
+			3000,
+			3864,
+			3000,
+			3000,
+			3000,
+			3000,
+			3000,
+			3000,
+			3000,
+			3000,
+			3000,
+
+		}
+	},
+};
+static int current_interval_mode = 0;
+
+/*
+channel and modes
+ch	mode	
+1	0	
+2	0	weak
+3	2	Mode 2 used
+4	1	
+5	1	
+6	0	
+7	0	
+8	1	
+9	0	
+10	1	
+11	0	
+12	0	
+13	0	
+14		??
+
+	
+*/
+
+void led_set_interval_mode(int mode)
+{
+	current_interval_mode = mode;
+	set_i2s_div_pat(timer_interval_values[mode].freq_div,
+		timer_interval_values[mode].clock_pattern);
+}
+
+static constexpr int phase_sum(const timer_interval_values_t values, int index) { return index == -1 ? 0 : values.timer_duration_phase[index] + phase_sum(values, index-1); }
+static_assert(phase_sum(timer_interval_values[0], max_phase-1) == timer_interval_values[0].timer_interval, "timer_interval[0] sum mismatch");
+static_assert(phase_sum(timer_interval_values[1], max_phase-1) == timer_interval_values[1].timer_interval, "timer_interval[1] sum mismatch");
+static_assert(phase_sum(timer_interval_values[2], max_phase-1) == timer_interval_values[2].timer_interval, "timer_interval[2] sum mismatch");
 
 static uint32_t next_tick;
+
+static inline uint32_t ICACHE_RAM_ATTR led_tbl_gamma(uint8_t x) { return gamma_table[x]; }
+static inline uint32_t ICACHE_RAM_ATTR led_tbl_bw(uint8_t x)
+{
+	// black & white (2 level) display
+	return x >= 0x80 ? byte_reverse(0b01010101010101010101010101010101) : 0;
+}
+
 
 /**
  * set one line brightness
@@ -493,26 +625,33 @@ static void ICACHE_RAM_ATTR led_set_brightness_one_row(int start_led, bool do_gl
 
 	// fill fifo with buffer, with
 	// converting gamma and adding latch pattern
-#define WR(N, L) do { \
-	uint32_t w = gamma_table[*(N)]; w += L; \
+#define WR(N, L, TBL) do { \
+	uint32_t w = TBL(*(N)); w += L; \
 	*(fifoPtr++) = w; } while(0)
-#define PL(I,C,L) WR((I)+start_led+(C), (L) )
-	PL(0*8,buf,  0);
-	PL(1*8,buf,  0);
-	PL(2*8,buf,  0);
-	PL(3*8,buf,  0);
-	PL(4*8,buf,  0);
-	PL(5*8,buf,  0);
-	PL(6*8,buf,  0);
-	PL(7*8,buf,  data_latch_pattern);
-	PL(0*8,buf2, 0);
-	PL(1*8,buf2, 0);
-	PL(2*8,buf2, 0);
-	PL(3*8,buf2, 0);
-	PL(4*8,buf2, 0);
-	PL(5*8,buf2, 0);
-	PL(6*8,buf2, 0);
-	PL(7*8,buf2, do_global_latch ? global_latch_pattern : data_latch_pattern);
+#define PL(TBL, I,C,L) WR((I)+start_led+(C), (L), TBL)
+#define REG(TBL) do { \
+	PL(TBL, 0*8,buf,  0); \
+	PL(TBL, 1*8,buf,  0); \
+	PL(TBL, 2*8,buf,  0); \
+	PL(TBL, 3*8,buf,  0); \
+	PL(TBL, 4*8,buf,  0); \
+	PL(TBL, 5*8,buf,  0); \
+	PL(TBL, 6*8,buf,  0); \
+	PL(TBL, 7*8,buf,  data_latch_pattern); \
+	PL(TBL, 0*8,buf2, 0); \
+	PL(TBL, 1*8,buf2, 0); \
+	PL(TBL, 2*8,buf2, 0); \
+	PL(TBL, 3*8,buf2, 0); \
+	PL(TBL, 4*8,buf2, 0); \
+	PL(TBL, 5*8,buf2, 0); \
+	PL(TBL, 6*8,buf2, 0); \
+	PL(TBL, 7*8,buf2, do_global_latch ? global_latch_pattern : data_latch_pattern); \
+	} while(0)
+
+	if(led_pwm_clock_running)
+		REG(led_tbl_gamma);
+	else
+		REG(led_tbl_bw);
 
 
 	// begin SPI transaction
@@ -737,20 +876,26 @@ static constexpr uint32_t interrupt_delay = 50;
 /**
  * maximum interrupt overrun count allowed before resetting the tick
  */
-static constexpr uint32_t max_overrun_count = 2;
+static constexpr uint32_t max_overrun_count = 5;
 
 static int last_overrun_phase;
 
-
+//static bool in_timer_handler = false;
 /**
  * Timer interrupt handler
  */
 static void ICACHE_RAM_ATTR timer_handler()
 {
+	int phase = current_phase;
+
 	++interrupt_count;
 
-	int phase = current_phase;
-	uint32_t phase_duration = timer_duration_phase[phase];
+	uint32_t phase_duration =
+		timer_interval_values[current_interval_mode].timer_duration_phase[phase]
+#if F_CPU == 160000000
+		*2
+#endif
+		;
 
 	next_tick += phase_duration;
 	timer0_write(next_tick);
@@ -789,7 +934,7 @@ static void led_init_timer()
 
 	timer0_isr_init();
 	timer0_attachInterrupt(timer_handler);
-	timer0_write(next_tick = ESP.getCycleCount() + timer_interval);
+	timer0_write(next_tick = ESP.getCycleCount() + 65536 /* any values over one vsync interval */);
 }
 
 
@@ -803,11 +948,13 @@ void led_init()
 	led_init_spi_and_ledclock();
 	led_init_led1642();
 	led_init_timer();
+	led_set_interval_mode(0);
 
 	for(int i = 0; i < 48; i++)
 		for(int j = 0; j < 64; j++)
 		get_current_frame_buffer().array()[i][j] = 0;
 
+	led_start_pwm_clock();
 }
 
 
@@ -932,21 +1079,38 @@ if(current_row == 0)
 }
 
 */
+		static int mode = 0;
+/*
+{
+	static uint32_t next = millis() + 18000;
+	if(millis() >= next)
+	{
+		++mode;
+		if(mode == LED_NUM_INTERVAL_MODE) mode = 0;
 
+		led_set_interval_mode(mode);
+		Serial.printf("mode:%d\r\n", mode);
+		next = millis() + 18000;
 
+	}
+}
+*/
+
+{
 	static uint32_t next = millis() + 1000;
 	if(millis() >= next)
 	{
-		Serial.printf("%d %d %d %d %04x\r\n", interrupt_count, interrupt_overrun?1:0, last_overrun_phase, WiFi.RSSI(), button_read);
+		Serial.printf("interval:%d int_cnt:%d ovrn:%d last_ovrn_p:%d rssi=%d chan=%d mode=%d %04x\r\n", timer_interval_values[current_interval_mode].timer_interval, interrupt_count, (int)interrupt_overrun, last_overrun_phase, WiFi.RSSI(), WiFi.channel(), mode, button_read);
 
 		interrupt_count = 0;
 		interrupt_overrun = false;
 		next =millis() + 1000;
 		int n = analogRead(0);
-		Serial.printf("ambient : %d\r\n", n);
+		Serial.printf("ambient=%d phy_mode=%d\r\n", n, WiFi.getPhyMode());
 
 
 	}
+}
 
 }
 

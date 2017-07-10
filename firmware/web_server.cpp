@@ -4,6 +4,7 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include <StreamString.h>
+#include "matrix_drive.h"
 
 static ESP8266WebServer server(80);
 static const char* serverIndex = "<form method='POST' action='/update' enctype='multipart/form-data'><input type='file' name='update'><input type='submit' value='Update'></form>"; // TODO: make this on flash
@@ -55,7 +56,7 @@ static void web_server_ota_upload_handler()
 
 	HTTPUpload& upload = server.upload();
 	if(upload.status == UPLOAD_FILE_START){
-		I2STXF = 0; // DISABLE LED PWM clock // TODO: encapslation
+		led_stop_pwm_clock(); // stop harmful LED PWM clock which will interfere with WiFi.
 		Serial.setDebugOutput(true);
 		WiFiUDP::stopAll();
 		Serial.printf_P(PSTR("Update: %s\n"), upload.filename.c_str());

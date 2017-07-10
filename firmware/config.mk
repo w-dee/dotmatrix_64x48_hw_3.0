@@ -11,6 +11,7 @@ LIBS = $(ESP_LIBS)/SPI \
 UPLOAD_SPEED = 921600
 UPLOAD_RESET = nodemcu
 FLASH_DEF = 4M3M
+#F_CPU=160000000
 
 # flash rom layout:
 

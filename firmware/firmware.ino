@@ -3,6 +3,7 @@
 #include <Wire.h>
 #include <FS.h>
 
+
 #include SSID_H
 
 #include "matrix_drive.h"
@@ -62,7 +63,7 @@ void setup(void){
   Serial.begin(115200);
   Serial.print("\r\n\r\nWelcome\r\n");
   WiFi.mode(WIFI_OFF);
-
+  WiFi.setPhyMode(WIFI_PHY_MODE_11N);
 
   ir_init();
   led_init();
@@ -126,10 +127,22 @@ void setup(void){
 
 
 void test_led_sel_row();
+extern "C" {
+uint8 wifi_get_channel(void);
+}
 
 static int init_state = 0;
 void loop() 
 {
+
+	static int last_chann = -1;
+	int now_chann = wifi_get_channel();
+	if(last_chann != now_chann)
+	{
+		last_chann = now_chann;
+		Serial.printf_P(PSTR("WiFi channel changed: %d\r\n"), now_chann);
+	}
+
 	test_led_sel_row();
 	button_update();
 
