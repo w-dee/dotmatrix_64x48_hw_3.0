@@ -20,6 +20,10 @@ public:
 	//! returns height
 	int get_height() const { return LED_MAX_LOGICAL_ROW; }
 
+	//! clip bounding box
+	//! returns wheter the box is remaining
+	bool clip(int &fx, int &fy, int &x, int &y, int &w, int &h) const;
+
 	//! Returns array
 	array_t & ICACHE_RAM_ATTR array() { return buffer; }
 

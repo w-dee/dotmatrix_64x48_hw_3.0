@@ -319,17 +319,7 @@ void bff_font_t::put(int32_t chr, int level, int x, int y, frame_buffer_t & fb) 
 	int w = ptr->glyph_info.bb_w, h = ptr->glyph_info.bb_h;
 
 	// clip font bounding box
-	if(x < 0)
-		fx += -x, w -= -x, x = 0;
-	if(y < 0)
-		fy += -y, h -= -h, y = 0;
-	if(x + w >= fb.get_width())
-		w -= fb.get_width() - (x + w);
-	if(y + h >= fb.get_height())
-		h -= fb.get_height() - (y + h);
-
-	// return if thereis nothing to draw
-	if(w <= 0 || h <= 0) return;
+	if(!fb.clip(fx, fy, x, y, w, h)) return;
 
 	// draw the pattern
 	const unsigned char *p = ptr->bitmap;

@@ -7,5 +7,6 @@ void led_set_interval_mode(int mode);
 extern uint32_t button_read;
 void led_start_pwm_clock();
 void led_stop_pwm_clock();
+void led_set_interval_mode_from_channel(uint8_t ch);
 #endif
 

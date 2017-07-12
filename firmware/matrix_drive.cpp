@@ -520,46 +520,26 @@ static constexpr timer_interval_values_t timer_interval_values[LED_NUM_INTERVAL_
 	{
 		6,
 		0xaaaaaaaa,
-		36864,
+		49152,
 		{
-			3000,
-			3000,
-			3864,
-			3000,
-			3000,
-			3000,
-			3000,
-			3000,
-			3000,
-			3000,
-			3000,
-			3000,
-
+			4100	,
+			4000	,
+			4152	,
+			4100	,
+			4100	,
+			4100	,
+			4100	,
+			4100	,
+			4100	,
+			4100	,
+			4100	,
+			4100	,
 		}
 	},
 };
 static int current_interval_mode = 0;
 
-/*
-channel and modes
-ch	mode	
-1	0	
-2	0	weak
-3	2	Mode 2 used
-4	1	
-5	1	
-6	0	
-7	0	
-8	1	
-9	0	
-10	1	
-11	0	
-12	0	
-13	0	
-14		??
 
-	
-*/
 
 void led_set_interval_mode(int mode)
 {
@@ -891,11 +871,11 @@ static void ICACHE_RAM_ATTR timer_handler()
 	++interrupt_count;
 
 	uint32_t phase_duration =
-		timer_interval_values[current_interval_mode].timer_duration_phase[phase]
+		timer_interval_values[current_interval_mode].timer_duration_phase[phase];
+
 #if F_CPU == 160000000
-		*2
+	phase_duration *= 2;
 #endif
-		;
 
 	next_tick += phase_duration;
 	timer0_write(next_tick);
@@ -943,16 +923,16 @@ static void led_init_timer()
  */
 void led_init()
 {
+	for(int i = 0; i < 48; i++)
+		for(int j = 0; j < 64; j++)
+		get_current_frame_buffer().array()[i][j] = 0;
+
 	led_init_gpio();
 	led_post();
 	led_init_spi_and_ledclock();
 	led_init_led1642();
 	led_init_timer();
 	led_set_interval_mode(0);
-
-	for(int i = 0; i < 48; i++)
-		for(int j = 0; j < 64; j++)
-		get_current_frame_buffer().array()[i][j] = 0;
 
 	led_start_pwm_clock();
 }
@@ -965,6 +945,41 @@ void led_uninit()
 {
 }
 
+
+/**
+ * set led pwm clock mode from wifi channel
+ */
+static uint8_t led_interval_mode_from_channel(uint8_t ch)
+{
+	// this table is from empirical test
+	// mode 0 = 26.666...MHz
+	// mode 1 = 16.000   MHz
+	// mode 2 = 13.333...MHz
+	switch(ch)
+	{
+		case	1	: return	0	; //	
+		case	2	: return	1	; //	or 0
+		case	3	: return	2	; //
+		case	4	: return	2	; //	or 1
+		case	5	: return	1	; //	
+		case	6	: return	0	; //	or 1
+		case	7	: return	0	; //	
+		case	8	: return	1	; //	
+		case	9	: return	2	; //	
+		case	10	: return	2	; //	
+		case	11	: return	1	; //	or 0
+		case	12	: return	0	; //	
+		case	13	: return	2	; //	
+		case	14	: return	0	; //	??
+	}
+
+	return 0; // fallback ... this should be most robust against EMI
+}
+
+void led_set_interval_mode_from_channel(uint8_t ch)
+{
+	led_set_interval_mode(led_interval_mode_from_channel(ch));
+}
 
 #define W 160
 #define H 60
@@ -1017,10 +1032,6 @@ static void step()
 }
 
 
-
-#include "fonts/font_5x5.h"
-#include "fonts/font_bff.h"
-#include "fonts/font_aa.h"
 /*
 unsigned char PROGMEM op[][64] = {
 #include "op.inc"
@@ -1038,18 +1049,21 @@ void test_led_sel_row()
 	}
 */
 //
-
+/*
 static int count = 0;
 if(count == 0)
 {
-	get_current_frame_buffer().draw_text(0, 0, 255, "0123", font_large_digits);
-//	get_current_frame_buffer().draw_text(0, 12, 255, "b", font_bff);
-//	get_current_frame_buffer().draw_text(0, 24, 255, "c", font_bff);
-//	get_current_frame_buffer().draw_text(0, 36, 255, "　-dee", font_bff);
 
+	for(int y = 24; y < 48; y++)
+	{
+		for(int x = 0; x < 64; x++)
+		{
+			get_current_frame_buffer().array()[y][x] = x*4;
+		}
+	}
 	++count;
 }
-
+*/
 /*
 while(1)
 {
@@ -1079,10 +1093,10 @@ if(current_row == 0)
 }
 
 */
-		static int mode = 0;
-/*
+
 {
-	static uint32_t next = millis() + 18000;
+	static int mode;
+	static uint32_t next = millis() + 20000;
 	if(millis() >= next)
 	{
 		++mode;
@@ -1090,17 +1104,17 @@ if(current_row == 0)
 
 		led_set_interval_mode(mode);
 		Serial.printf("mode:%d\r\n", mode);
-		next = millis() + 18000;
+		next = millis() + 20000;
 
 	}
 }
-*/
+
 
 {
 	static uint32_t next = millis() + 1000;
 	if(millis() >= next)
 	{
-		Serial.printf("interval:%d int_cnt:%d ovrn:%d last_ovrn_p:%d rssi=%d chan=%d mode=%d %04x\r\n", timer_interval_values[current_interval_mode].timer_interval, interrupt_count, (int)interrupt_overrun, last_overrun_phase, WiFi.RSSI(), WiFi.channel(), mode, button_read);
+		Serial.printf("interval:%d int_cnt:%d ovrn:%d last_ovrn_p:%d rssi=%d chan=%d mode=%d %04x\r\n", timer_interval_values[current_interval_mode].timer_interval, interrupt_count, (int)interrupt_overrun, last_overrun_phase, WiFi.RSSI(), WiFi.channel(), current_interval_mode, button_read);
 
 		interrupt_count = 0;
 		interrupt_overrun = false;

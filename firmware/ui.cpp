@@ -6,6 +6,11 @@
 #include "buttons.h"
 #include "frame_buffer.h"
 #include "matrix_drive.h"
+#include "wifi.h"
+
+#include "fonts/font_5x5.h"
+#include "fonts/font_bff.h"
+#include "fonts/font_aa.h"
 
 enum transition_t { t_none };
 
@@ -179,6 +184,84 @@ class screen_led_test_t : public screen_base_t
 	}
 };
 
+//! ASCII string editor UI
+class screen_ascii_editor_t : public screen_base_t
+{
+	static constexpr int num_char_list_lines = 12;
+
+	String line; //!< a string to be edited
+	int max_chars; //!< maximum bytes arrowed
+
+	String char_list[num_char_list_lines];
+
+	int line_start = 0; //!< line display start character index
+	int char_list_start = 0; //!< char_list display start line index
+	int cursor = 0; //!< cursor position in line
+	int y = 0; //!< logical position in char_list or line; 0=line, 1=BS/DEL, 2~ = char_list
+	int x = 0; //!< logical position in char_list
+
+public:
+
+	screen_ascii_editor_t(const String &_line = "", int _max_chars = -1) :
+			line(_line),
+			max_chars(_max_chars),
+			char_list
+				{
+					F("BS DEL"),
+					F("0123456789"),
+					F("qwertyuiop"),
+					F("asdfghjkl"),
+					F("zxcvbnm"),
+					F("QWERTYUIOP"),
+					F("ASDFGHJKL"),
+					F("ZXCVBNM"),
+					F(" !\"#$%&'()"),
+					F("*+,-./:;"),
+					F("@[\\]^_<=>?"),
+					F("`{|}~")
+				}
+
+	{
+		draw();
+	}
+
+	void draw()
+	{
+		auto && fb = get_current_frame_buffer();
+		// erase
+		fb.fill(
+			0, 0, LED_MAX_LOGICAL_COL, LED_MAX_LOGICAL_ROW, 0);
+
+		// draw line
+		fb.draw_text(0, 0, 255, line.c_str() + line_start, font_5x5);
+
+		// draw char_list
+		for(int i = 0; i < 8; ++i)
+		{
+			fb.draw_text(0, i*6, 255, char_list[i+1].c_str(), font_5x5);
+		}
+	}
+
+
+	void on_button(uint32_t button)
+	{
+		switch(button)
+		{
+		case BUTTON_OK:
+			wifi_wps();
+			break;
+		}
+	}
+
+};
+
+
+//	get_current_frame_buffer().draw_text(0, 0, 255, "0123", font_large_digits);
+//	get_current_frame_buffer().draw_text(0, 12, 255, "b", font_bff);
+//	get_current_frame_buffer().draw_text(0, 24, 255, "c", font_bff);
+//	get_current_frame_buffer().draw_text(0, 36, 255, "　-dee", font_bff);
+
+
 //! channel test ui
 class screen_channel_test_t : public screen_base_t
 {
@@ -272,7 +355,7 @@ static void ui_loop()
 
 void ui_setup()
 {
-	screen_manager.push(new screen_channel_test_t());
+	screen_manager.push(new screen_ascii_editor_t());
 }
 
 void ui_process()

@@ -4,7 +4,6 @@
 #include <FS.h>
 
 
-#include SSID_H
 
 #include "matrix_drive.h"
 #include "buttons.h"
@@ -14,6 +13,7 @@
 #include "ui.h"
 #include "settings.h"
 #include "web_server.h"
+#include "wifi.h"
 
 #include "spiffs_api.h"
 extern "C" uint32_t _SPIFFS_start;
@@ -62,11 +62,12 @@ void setup(void){
 
   Serial.begin(115200);
   Serial.print("\r\n\r\nWelcome\r\n");
-  WiFi.mode(WIFI_OFF);
-  WiFi.setPhyMode(WIFI_PHY_MODE_11N);
-
+  
+  
   ir_init();
   led_init();
+  wifi_setup();
+
   Wire.begin(WIRE_SDA, WIRE_SCL);
 
 
@@ -127,59 +128,19 @@ void setup(void){
 
 
 void test_led_sel_row();
-extern "C" {
-uint8 wifi_get_channel(void);
-}
 
 static int init_state = 0;
 void loop() 
 {
-
-	static int last_chann = -1;
-	int now_chann = wifi_get_channel();
-	if(last_chann != now_chann)
-	{
-		last_chann = now_chann;
-		Serial.printf_P(PSTR("WiFi channel changed: %d\r\n"), now_chann);
-	}
-
+	wifi_check();
 	test_led_sel_row();
 	button_update();
 
 	ui_process();
-
-	if(init_state == 0 && millis() > 4000)
-	{
-		init_state = 1;
-		Serial.println("connecting ...\r\n"); 
-		WiFi.mode(WIFI_OFF);
-		WiFi.mode(WIFI_STA);
-		WiFi.begin(ssid, password);
-	}
+	web_server_handle_client();
 
 
-	if(init_state == 1)
-	{
-//		Serial.printf("%d\r\n", (int)WiFi.status());
-		if(WiFi.status() == WL_CONNECTED)
-		{
-			init_state = 2;
 
-		  Serial.println("");
-		  Serial.print("N Connected to ");
-		  Serial.println(ssid);
-		  Serial.print("IP address: ");
-		  Serial.println(WiFi.localIP());
-
-
-		}
-	}
-
-
-	if(init_state == 2)
-	{
-		web_server_handle_client();
-	}
 	{
 		static ir_status_t last_ir_status = (ir_status_t)-1;
 		ir_status_t new_ir_status = ir_get_status();

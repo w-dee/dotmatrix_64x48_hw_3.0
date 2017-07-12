@@ -696,17 +696,10 @@ void font_5x5_t::put(int32_t chr, int level, int x, int y, frame_buffer_t & fb) 
 	int w = 5, h = 5;
 
 	// clip font bounding box
-	if(x < 0)
-		fx += -x, w -= -x, x = 0;
-	if(y < 0)
-		fy += -y, h -= -h, y = 0;
-	if(x + w >= fb.get_width())
-		w -= fb.get_width() - (x + w);
-	if(y + h >= fb.get_height())
-		h -= fb.get_height() - (y + h);
+	if(!fb.clip(fx, fy, x, y, w, h)) return;
 
 	// return if thereis nothing to draw
-	if(w <= 0 || h <= 0 || chr <= 0x20 || chr > 0x7e) return;
+	if(chr <= 0x20 || chr > 0x7e) return;
 
 	// draw the pattern
 	const unsigned char *p = &(font_5x5_data[chr -0x21][0]);

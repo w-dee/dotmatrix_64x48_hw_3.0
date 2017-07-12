@@ -90,6 +90,22 @@ static bool utf8tow(const uint8_t * & in, uint32_t *out)
 	return false;
 }
 
+
+bool frame_buffer_t::clip(int &fx, int &fy, int &x, int &y, int &w, int &h) const
+{
+	if(x < 0)
+		fx += -x, w -= -x, x = 0;
+	if(y < 0)
+		fy += -y, h -= -h, y = 0;
+	if(x + w >= get_width())
+		w -= (x + w) - get_width();
+	if(y + h >= get_height())
+		h -= (y + h) - get_height();
+
+	return w >= 0 && h >= 0;
+}
+
+
 void frame_buffer_t::draw_char(int x, int y, int level, int ch, const font_base_t & font)
 {
 	font.put(ch, level, x, y, *this);
