@@ -35,3 +35,7 @@ hardware/gerber/*.zip
 firmware.bin
 combined_rom.bin
 
+
+# private development tools
+dtools/
+
