@@ -7,15 +7,59 @@
 extern FS SETTINGS_SPIFFS;
 extern FS SPIFFS;
 static constexpr size_t MAX_KEY_LEN = 30;
+static constexpr int CHECKSUM_SIZE = sizeof(uint32_t); // in bytes
+
+//! initial value for crc.
+//! 0x00000000 or 0xffffffff is not suitable because it is
+//! indistinguishable from all-cleared RAM or all-cleared FLASH ROM.
+static constexpr uint32_t INITIAL_CRC_VALUE = 0x12345678;
+
+extern "C" { uint32_t crc_update(uint32_t crc, const uint8_t *data, size_t length); } // available in eboot_command.c
+
+//! check checksum for a setting.
+//! file pointer is set just after the setting checksum.
+//! returns whether the check sum is valid.
+static bool settings_check_crc(File & file)
+{
+	uint32_t file_crc = 0;
+	if(file.read(reinterpret_cast<uint8_t *>(&file_crc), CHECKSUM_SIZE) != CHECKSUM_SIZE)
+		return false; // read error
+
+	uint8_t ibuf[64];
+	uint32_t crc = INITIAL_CRC_VALUE;
+
+	while(true)
+	{
+		size_t isz = file.read(ibuf, sizeof(ibuf));
+		if(isz == 0) break;
+		crc = crc_update(crc, ibuf, isz);
+	}
+
+	file.seek(CHECKSUM_SIZE); // set file pointer just after the check sum
+
+//	Serial.printf_P(PSTR("file checksum: %08x   computed checksum: %08x\r\n"), file_crc, crc); 
+	return crc == file_crc;
+}
+
+
+// write checksum 
 
 //! write a non-string setting to specified settings entry
 bool settings_write(const String & key, const void * ptr, size_t size)
 {
+	if(key.length()  > MAX_KEY_LEN) return false;
+
 	const char mode[2]  = { 'w',  0  };
 	File file = SETTINGS_SPIFFS.open(key, mode);
 	if(!file) return false;
 
-	bool success = size == file.write(reinterpret_cast<const uint8_t *>(ptr), size);
+	uint32_t crc = INITIAL_CRC_VALUE;
+	crc = crc_update(crc, reinterpret_cast<const uint8_t *>(ptr), size);
+	bool success;
+	success = CHECKSUM_SIZE == file.write(reinterpret_cast<const uint8_t *>(&crc), CHECKSUM_SIZE);
+	if(!success) { file.close(); return false; }
+
+	success = size == file.write(reinterpret_cast<const uint8_t *>(ptr), size);
 
 	file.close();
 	return success;
@@ -24,19 +68,7 @@ bool settings_write(const String & key, const void * ptr, size_t size)
 //! write a string setting to specified settings entry
 bool settings_write(const String & key, const String & value)
 {
-	if(key.length()  > MAX_KEY_LEN) return false;
-
-	const char mode[2]  = { 'w',  0  };
-	File file = SETTINGS_SPIFFS.open(key, mode);
-	if(!file) return false;
-
-	size_t size = value.length();
-
-	bool success = size == file.write(
-		reinterpret_cast<const uint8_t *>(value.c_str()), size);
-
-	file.close();
-	return success;
+	return settings_write(key, value.c_str(), value.length());
 }
 
 
@@ -47,6 +79,8 @@ bool settings_read(const String & key, void *ptr, size_t size)
 	const char mode[2]  = { 'r',  0  };
 	File file = SETTINGS_SPIFFS.open(key, mode);
 	if(!file) return false;
+
+	if(!settings_check_crc(file)) { file.close(); return false; }
 
 	bool success = size == file.read(reinterpret_cast<uint8_t *>(ptr), size);
 
@@ -63,7 +97,9 @@ bool settings_read(const String & key, String & value)
 	File file = SETTINGS_SPIFFS.open(key, mode);
 	if(!file) return false;
 
-	size_t size = file.size();
+	if(!settings_check_crc(file)) { file.close(); return false; }
+
+	size_t size = file.size() - CHECKSUM_SIZE;
 	if(!value.reserve(size))
 	{
 		file.close();
@@ -103,6 +139,7 @@ bool settings_export(const String & target_name,
 
 		// write content as base64
 		File in = dir.openFile(rmode);
+		if(!settings_check_crc(in)) { in.close(); continue; }
 		base64_encodestate b64state;
 		base64_init_encodestate(&b64state);
 		uint8_t ibuf[64];
@@ -171,6 +208,13 @@ bool settings_import(const String & target_name)
 		// open file
 		File out = SETTINGS_SPIFFS.open(key_name, wmode);
 
+		// reserve checksum space
+		uint32_t crc = 0xffffffff;
+		if(CHECKSUM_SIZE !=
+			out.write(reinterpret_cast<const uint8_t *>(&crc),
+				CHECKSUM_SIZE)) return false; // file write error
+		crc = INITIAL_CRC_VALUE;
+
 		// parse value
 		uint8_t ibuf[64];
 		uint8_t obuf[64];
@@ -196,9 +240,16 @@ bool settings_import(const String & target_name)
 			size_t osz;
 			if(isz == 0) break;
 			osz = base64_decode_block((const char *)ibuf, isz, (char *)obuf, &b64state);
+			crc = crc_update(crc, obuf, osz);
 			if(osz != out.write(obuf, osz)) return false;
 			if(end_found) break;
 		}
+
+		// write CRC back
+		out.seek(0);
+		if(CHECKSUM_SIZE !=
+			out.write(reinterpret_cast<const uint8_t *>(&crc),
+				CHECKSUM_SIZE)) return false; // file write error
 	}
 
 	return true;

@@ -21,6 +21,7 @@ void wifi_setup()
 
 	// try to connect
 	WiFi.mode(WIFI_STA);
+	WiFi.setSleepMode(WIFI_NONE_SLEEP);
 	WiFi.begin(ssid, password);
 }
 

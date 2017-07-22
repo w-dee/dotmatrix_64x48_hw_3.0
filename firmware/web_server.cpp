@@ -5,13 +5,20 @@
 #include <ESP8266mDNS.h>
 #include <StreamString.h>
 #include "matrix_drive.h"
+#include "buttons.h"
+#include <FS.h>
+
+extern FS SPIFFS; // main FS
 
 static ESP8266WebServer server(80);
-static const char* serverIndex = "<form method='POST' action='/update' enctype='multipart/form-data'><input type='file' name='update'><input type='submit' value='Update'></form>"; // TODO: make this on flash
+#define serverIndex  F("<form method='POST' action='/update' enctype='multipart/form-data'><input type='file' name='update'><input type='submit' value='Update'></form>")
 
 enum ota_status_t { ota_header, ota_content, ota_success, ota_fail };
 static ota_status_t ota_status;
 static StreamString LastOTAError;
+
+static String password; //!< password in plain text
+static const char * user_name = "admin"; //!< default user name
 
 /*
 	The OTA handler receives combined ROM
@@ -172,26 +179,102 @@ static void web_server_ota_upload_handler()
 	yield();
 }
 
+static bool send_common_header()
+{
+	if(!server.authenticate(user_name, password.c_str()))
+	{
+		server.requestAuthentication();
+		return false;
+	}
+	server.sendHeader(F("Connection"), F("close"));
+	return true;
+}
+
+static bool loadFromFS(String path){
+	String dataType = F("text/plain");
+	if(path.endsWith("/")) path += F("index.html");
+
+	if(path.endsWith(".htm") || path.endsWith(".html")) dataType = F("text/html");
+	else if(path.endsWith(".css")) dataType = F("text/css");
+	else if(path.endsWith(".js"))  dataType = F("application/javascript");
+	else if(path.endsWith(".png")) dataType = F("image/png");
+	else if(path.endsWith(".gif")) dataType = F("image/gif");
+	else if(path.endsWith(".jpg")) dataType = F("image/jpeg");
+	else if(path.endsWith(".ico")) dataType = F("image/x-icon");
+	else if(path.endsWith(".xml")) dataType = F("text/xml");
+	else if(path.endsWith(".pdf")) dataType = F("application/pdf");
+	else if(path.endsWith(".zip")) dataType = F("application/zip");
+
+	path = String(F("/w")) + path; // all contents must be under "w" directory
+
+	File dataFile = SPIFFS.open(path.c_str(), "r");
+
+	if (!dataFile)
+		return false;
+
+	server.streamFile(dataFile, dataType);
+
+	dataFile.close();
+	return true;
+}
+
+
+static void handleNotFound()
+{
+	if(!send_common_header()) return;
+	if(loadFromFS(server.uri())) return;
+	String message = F("Not Found\n\n");
+	message += String(F("URI: "));
+	message += server.uri();
+	message += String(F("\nMethod: "));
+	message += (server.method() == HTTP_GET)?F("GET"):F("POST");
+	message += String(F("\nArguments: "));
+	message += server.args();
+	message += String(F("\n"));
+	for (uint8_t i=0; i<server.args(); i++){
+		message += String(F(" NAME:"))+server.argName(i) + F("\n VALUE:") + server.arg(i) + F("\n");
+	}
+	server.send(404, F("text/plain"), message);
+
+}
+
+static void send_json_ok()
+{
+	server.send(200, F("application/json"), F("{\"result\":\"ok\"}"));
+}
+
 void web_server_setup()
 {
+	password = F("admin"); // initial password
 
-	server.on("/", HTTP_GET, [](){
-	  server.sendHeader("Connection", "close");
-	  server.send(200, "text/html", serverIndex);
-	});
-	server.on("/update", HTTP_POST, [](){
+	server.on(F("/update"), HTTP_POST, [](){
 			Serial.println(F("\r\nOTA done.\r\n"));
-			server.sendHeader("Connection", "close");
-			server.send(200, "text/plain", (ota_status == ota_fail || Update.hasError())?("FAIL:"+LastOTAError).c_str():"OK");
+			if(!send_common_header()) return;
+			server.send(200, F("text/plain"),
+				(ota_status == ota_fail || Update.hasError())?("FAIL:"+LastOTAError).c_str():"OK");
 			server.close();
 			timer0_detachInterrupt();
 			delay(2000);
 			ESP.restart();
 		}, []() { web_server_ota_upload_handler(); });
 
+	server.on(F("/keys/U"), HTTP_GET, []() {
+		if(!send_common_header()) return; button_push(BUTTON_UP);     send_json_ok(); });
+	server.on(F("/keys/D"), HTTP_GET, []() {
+		if(!send_common_header()) return; button_push(BUTTON_DOWN);   send_json_ok(); });
+	server.on(F("/keys/L"), HTTP_GET, []() {
+		if(!send_common_header()) return; button_push(BUTTON_LEFT);   send_json_ok(); });
+	server.on(F("/keys/R"), HTTP_GET, []() {
+		if(!send_common_header()) return; button_push(BUTTON_RIGHT);  send_json_ok(); });
+	server.on(F("/keys/O"), HTTP_GET, []() {
+		if(!send_common_header()) return; button_push(BUTTON_OK);     send_json_ok(); });
+	server.on(F("/keys/C"), HTTP_GET, []() {
+		if(!send_common_header()) return; button_push(BUTTON_CANCEL); send_json_ok(); });
+	server.onNotFound(handleNotFound);
 
-  server.begin();
-  Serial.println(F("HTTP server started"));
+
+	server.begin();
+	Serial.println(F("HTTP server started"));
 
 }
 

@@ -3,6 +3,7 @@ THIS_DIR := $(realpath $(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
 ROOT := $(THIS_DIR)/..
 LIBS = $(ESP_LIBS)/SPI \
   $(ESP_LIBS)/Wire \
+  $(ESP_LIBS)/Ticker \
   $(ESP_LIBS)/ESP8266WiFi \
   $(ESP_LIBS)/ESP8266WebServer \
   $(ESP_LIBS)/ESP8266mDNS 

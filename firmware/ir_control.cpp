@@ -177,9 +177,10 @@ static void ICACHE_RAM_ATTR timer_replay_handler()
 		USF(1) = 0x5b; // write 38kHz pulse
 		USF(1) = 0x5b; // write 38kHz pulse
 		// Although timer_replay_handler is called about once per
-		// sending one character, we push the extra characters.
+		// sending one character, we push the extra character to fill
+		// the serial output hardware buffer.
 		// The important thing here is that the pulse is continuously sent,
-		// there is no care about overflow.
+		// there is no care about buffer overflow.
 	}
 	else
 	{

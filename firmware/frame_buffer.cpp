@@ -4,6 +4,7 @@
 
 frame_buffer_t buffers[2]; // for double buffering
 frame_buffer_t & current_frame_buffer = buffers[0];
+frame_buffer_t & bg_frame_buffer = buffers[1];
 
 static int get_utf8_bytes(uint8_t c)
 {
@@ -192,7 +193,13 @@ void frame_buffer_t::fill(int x, int y, int w, int h, int level)
 void frame_buffer_flip()
 {
 	if(&current_frame_buffer == buffers + 0)
+	{
 		current_frame_buffer = buffers[1];
+		bg_frame_buffer      = buffers[0];
+	}
 	else
+	{
 		current_frame_buffer = buffers[0];
+		bg_frame_buffer      = buffers[1];
+	}
 }

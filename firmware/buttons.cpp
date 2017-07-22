@@ -85,3 +85,14 @@ uint32_t button_get()
 	return ret;
 }
 
+/**
+ * Emulate button pushing
+ */
+void button_push(uint32_t button)
+{
+	for(int i = 0; i < MAX_BUTTONS; i++)
+	{
+		if(((1<<i) & button) && buttons[i] != 255) ++buttons[i];
+	}
+}
+

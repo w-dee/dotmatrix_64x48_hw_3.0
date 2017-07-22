@@ -65,8 +65,10 @@ public:
 // the framebuffer
 extern frame_buffer_t buffers[2]; // for double buffering
 extern frame_buffer_t & current_frame_buffer;
+extern frame_buffer_t & bg_frame_buffer;
 
 static inline ICACHE_RAM_ATTR frame_buffer_t & get_current_frame_buffer() { return current_frame_buffer;}
+static inline ICACHE_RAM_ATTR frame_buffer_t & get_bg_frame_buffer() { return bg_frame_buffer;}
 
 //! swap current frame buffer
 void frame_buffer_flip();

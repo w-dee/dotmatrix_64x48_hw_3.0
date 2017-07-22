@@ -36,5 +36,7 @@ uint32_t button_get();
 #define BUTTON_OK        (1<<ORD_BUTTON_OK)
 #define BUTTON_CANCEL    (1<<ORD_BUTTON_CANCEL)
 
+void button_push(uint32_t button);
+
 #endif
 

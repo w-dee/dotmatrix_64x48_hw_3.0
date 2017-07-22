@@ -958,19 +958,18 @@ static uint8_t led_interval_mode_from_channel(uint8_t ch)
 	switch(ch)
 	{
 		case	1	: return	0	; //	
-		case	2	: return	1	; //	or 0
+		case	2	: return	0	; //
 		case	3	: return	2	; //
-		case	4	: return	2	; //	or 1
+		case	4	: return	2	; //
 		case	5	: return	1	; //	
-		case	6	: return	0	; //	or 1
+		case	6	: return	1	; //	
 		case	7	: return	0	; //	
-		case	8	: return	1	; //	
+		case	8	: return	2	; //	
 		case	9	: return	2	; //	
 		case	10	: return	2	; //	
 		case	11	: return	1	; //	or 0
 		case	12	: return	0	; //	
 		case	13	: return	2	; //	
-		case	14	: return	0	; //	??
 	}
 
 	return 0; // fallback ... this should be most robust against EMI
@@ -981,6 +980,7 @@ void led_set_interval_mode_from_channel(uint8_t ch)
 	led_set_interval_mode(led_interval_mode_from_channel(ch));
 }
 
+#if 0
 #define W 160
 #define H 60
 
@@ -1031,7 +1031,7 @@ static void step()
 	}
 }
 
-
+#endif
 /*
 unsigned char PROGMEM op[][64] = {
 #include "op.inc"
@@ -1093,7 +1093,7 @@ if(current_row == 0)
 }
 
 */
-
+/*
 {
 	static int mode;
 	static uint32_t next = millis() + 20000;
@@ -1108,7 +1108,7 @@ if(current_row == 0)
 
 	}
 }
-
+*/
 
 {
 	static uint32_t next = millis() + 1000;
