@@ -465,11 +465,11 @@ const PROGMEM unsigned char font_5x5_data[][5] = {
 
 
 { // 0x61 a
-" @@  "_b,
-"   @ "_b,
-" @@@ "_b,
-"@  @ "_b,
-" @@@ "_b,
+"     "_b,
+"     "_b,
+"  @@ "_b,
+" @ @ "_b,
+" @@@@"_b,
 },
 { // 0x62 b
 "@    "_b,
@@ -493,10 +493,10 @@ const PROGMEM unsigned char font_5x5_data[][5] = {
 " @@@ "_b,
 },
 { // 0x65 e
-" @@  "_b,
-"@  @ "_b,
-"@@@  "_b,
-"@    "_b,
+"     "_b,
+" @   "_b,
+"@ @  "_b,
+"@@   "_b,
 " @@  "_b,
 },
 { // 0x66 f
@@ -507,10 +507,10 @@ const PROGMEM unsigned char font_5x5_data[][5] = {
 " @   "_b,
 },
 { // 0x67 g
-" @@@@"_b,
-"@  @ "_b,
-" @@@ "_b,
-"   @ "_b,
+"     "_b,
+"  @@ "_b,
+" @ @ "_b,
+"  @@ "_b,
 "@@@  "_b,
 },
 { // 0x68 h
@@ -676,6 +676,85 @@ const PROGMEM unsigned char font_5x5_data[][5] = {
 },
 
 
+{ // 0x2080 small 0
+"000  "_b,
+"0 0  "_b,
+"0 0  "_b,
+"0 0  "_b,
+"000  "_b,
+},
+{ // 0x2081 small 1
+" 1   "_b,
+" 1   "_b,
+" 1   "_b,
+" 1   "_b,
+" 1   "_b,
+},
+{ // 0x2082 small 2
+"222  "_b,
+"  2  "_b,
+"222  "_b,
+"2    "_b,
+"222  "_b,
+},
+{ // 0x2083 small 3
+"333  "_b,
+"  3  "_b,
+"333  "_b,
+"  3  "_b,
+"333  "_b,
+},
+{ // 0x2084 small 4
+"4 4  "_b,
+"4 4  "_b,
+"444  "_b,
+"  4  "_b,
+"  4  "_b,
+},
+{ // 0x2085 small 5
+"555  "_b,
+"5    "_b,
+"555  "_b,
+"  5  "_b,
+"555  "_b,
+},
+{ // 0x2086 small 6
+"666  "_b,
+"6    "_b,
+"666  "_b,
+"6 6  "_b,
+"666  "_b,
+},
+{ // 0x2087 small 7
+"777  "_b,
+"  7  "_b,
+"  7  "_b,
+"  7  "_b,
+"  7  "_b,
+},
+{ // 0x2088 small 8
+"888  "_b,
+"8 8  "_b,
+"888  "_b,
+"8 8  "_b,
+"888  "_b,
+},
+{ // 0x2089 small 9
+"999  "_b,
+"9 9  "_b,
+"999  "_b,
+"  9  "_b,
+"999  "_b,
+},
+
+
+{ // 0x208f small .
+"     "_b,
+"     "_b,
+"     "_b,
+"     "_b,
+"@    "_b,
+},
 
 
 
@@ -685,7 +764,13 @@ font_base_t::metrics_t font_5x5_t::get_metrics(int32_t chr) const
 {
 	// this font covers 0x20~ 0x7e
 	if(chr < 0x20 || chr > 0x7e)
+	{
+		if(chr >= 0x2080 && chr <= 0x2089)
+			return metrics_t{4, 6, true};
+		if(chr == 0x208f)
+			return metrics_t{2, 6, true};
 		return metrics_t{0,0,false};
+	}
 	else
 		return metrics_t{6,6,true};
 }
@@ -698,11 +783,19 @@ void font_5x5_t::put(int32_t chr, int level, int x, int y, frame_buffer_t & fb) 
 	// clip font bounding box
 	if(!fb.clip(fx, fy, x, y, w, h)) return;
 
-	// return if thereis nothing to draw
-	if(chr <= 0x20 || chr > 0x7e) return;
 
 	// draw the pattern
-	const unsigned char *p = &(font_5x5_data[chr -0x21][0]);
+	const unsigned char *p = nullptr;
+
+	if(chr >= 0x21 && chr <= 0x7e)
+		p = &(font_5x5_data[chr -0x21][0]);
+	else if(chr >= 0x2080 && chr <= 0x2089)
+		p = &(font_5x5_data[chr - 0x2080 + 94][0]);
+	else if(chr == 0x208f)
+		p = &(font_5x5_data[chr - 0x208f + 104][0]);
+
+	// return if thereis nothing to draw
+	if(!p) return;
 
 	for(int yy = y; yy < h+y; ++yy, ++fy)
 	{
