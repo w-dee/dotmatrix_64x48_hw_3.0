@@ -1,0 +1,87 @@
+<!doctype html>
+
+<html>
+  <head>
+	<meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+
+    <title>Mazo Clock</title>
+    <meta name="description" content="${description}" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <script src="js/promise.min.js"></script>
+    <script src="js/fetch.js"></script>
+    <script src="js/riot+compiler.min.js"></script>
+ <!--   <link rel="stylesheet" href="todo.css"> -->
+
+    <!--[if lt IE 9]>
+    <script src="js/es5-shim.min.js"></script>
+    <script src="js/html5shiv.min.js"></script>
+    <script>html5.addElements('todo')</script>
+    <![endif]-->
+
+  </head>
+
+  <body>
+    <collapsible headding='"admin" Password'>
+		content1
+    </collapsible>
+    <collapsible headding='Clock Setting'>
+		content2
+    </collapsible>
+    <collapsible headding='Button Control'>
+    	<button-control> </button-control>
+    </collapsible>
+
+    <script type="riot/tag">
+      <collapsible>
+        <h1 onclick={ click }>{ headding }</h1>
+        <div if={ visible }>
+        <yield/>
+        </div>
+        this.headding = opts.headding
+		click(e) {
+			this.visible = !this.visible
+		}
+      </collapsible>
+    </script>
+
+	<script type="riot/tag">
+		<button-control>
+			<table>
+				<tr> <td>  </td><td><button onclick={ up }>↑</button></td><td>  </td><td> </td></tr>
+				<tr> <td><button onclick={ left }>←</button></td><td>  </td><td><button onclick={ right }>→</button></td><td> </td></tr>
+				<tr> <td>  </td><td><button onclick={ down }>↓</button></td><td>  </td><td> </td></tr>
+				<tr> <td><button onclick={ ok }>OK</button></td><td>  </td><td>  </td><td><button onclick={ cancel }>CANCEL</button></td></tr>
+			<table>
+
+		up(e) {
+			fetch('/keys/U', {credentials: 'same-origin'}).then(function(responce){})
+		}
+		left(e) {
+			fetch('/keys/L', {credentials: 'same-origin'}).then(function(responce){})
+		}
+		right(e) {
+			fetch('/keys/R', {credentials: 'same-origin'}).then(function(responce){})
+		}
+		down(e) {
+			fetch('/keys/D', {credentials: 'same-origin'}).then(function(responce){})
+		}
+		ok(e) {
+			fetch('/keys/O', {credentials: 'same-origin'}).then(function(responce){})
+		}
+		cancel(e) {
+			fetch('/keys/C', {credentials: 'same-origin'}).then(function(responce){})
+		}
+
+		</button-control>
+ 	</script>
+ 
+    <script>
+      // マウント
+      riot.mount('*');
+    </script>
+
+  </body>
+
+</html>
