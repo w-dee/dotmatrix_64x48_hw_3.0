@@ -4,6 +4,7 @@
 #include <ESP8266WiFi.h>
 #include "frame_buffer.h"
 #include "matrix_drive.h"
+#include "panic.h"
 
 #define LED_COL_SER_GPIO 13 // 13=MOSI
 #define LED_COL_LATCH_GPIO 12 // 12=MISO, but in DIO mode, it acts as second line of MOSI
@@ -99,7 +100,7 @@ static void led_post_set_led1642_config()
  */
 static void led_post()
 {
-	delay(3000);
+	delay(500);
 	// this check uses GPIO, not SPI hardware.
 
 	// set SDO delay; see also led_init_led1642() description
@@ -156,8 +157,7 @@ static void led_post()
 
 	if(error)
 	{
-		Serial.println(F("Sent serial data does not return to the sender. Check each components are properly soldered."));
-		// TODO: do panic 
+		do_panic(2, F("Sent serial data does not return to the sender. Check each components are properly soldered."));
 	}
 	else
 	{
@@ -537,16 +537,8 @@ static constexpr timer_interval_values_t timer_interval_values[LED_NUM_INTERVAL_
 		}
 	},
 };
-static int current_interval_mode = 0;
+static int current_interval_index = 0;
 
-
-
-void led_set_interval_mode(int mode)
-{
-	current_interval_mode = mode;
-	set_i2s_div_pat(timer_interval_values[mode].freq_div,
-		timer_interval_values[mode].clock_pattern);
-}
 
 static constexpr int phase_sum(const timer_interval_values_t values, int index) { return index == -1 ? 0 : values.timer_duration_phase[index] + phase_sum(values, index-1); }
 static_assert(phase_sum(timer_interval_values[0], max_phase-1) == timer_interval_values[0].timer_interval, "timer_interval[0] sum mismatch");
@@ -871,7 +863,7 @@ static void ICACHE_RAM_ATTR timer_handler()
 	++interrupt_count;
 
 	uint32_t phase_duration =
-		timer_interval_values[current_interval_mode].timer_duration_phase[phase];
+		timer_interval_values[current_interval_index].timer_duration_phase[phase];
 
 #if F_CPU == 160000000
 	phase_duration *= 2;
@@ -932,7 +924,7 @@ void led_init()
 	led_init_spi_and_ledclock();
 	led_init_led1642();
 	led_init_timer();
-	led_set_interval_mode(0);
+	led_set_interval_mode(LIM_AUTO);
 
 	led_start_pwm_clock();
 }
@@ -949,7 +941,7 @@ void led_uninit()
 /**
  * set led pwm clock mode from wifi channel
  */
-static uint8_t led_interval_mode_from_channel(uint8_t ch)
+static led_interval_mode_t led_interval_mode_from_channel(uint8_t ch)
 {
 	// this table is from empirical test
 	// mode 0 = 26.666...MHz
@@ -957,28 +949,77 @@ static uint8_t led_interval_mode_from_channel(uint8_t ch)
 	// mode 2 = 13.333...MHz
 	switch(ch)
 	{
-		case	1	: return	0	; //	
-		case	2	: return	0	; //
-		case	3	: return	2	; //
-		case	4	: return	2	; //
-		case	5	: return	1	; //	
-		case	6	: return	1	; //	
-		case	7	: return	0	; //	
-		case	8	: return	2	; //	
-		case	9	: return	2	; //	
-		case	10	: return	2	; //	
-		case	11	: return	1	; //	or 0
-		case	12	: return	0	; //	
-		case	13	: return	2	; //	
+		case	1	: return	LIM_MODE0	; //	
+		case	2	: return	LIM_MODE0	; //
+		case	3	: return	LIM_MODE2	; //
+		case	4	: return	LIM_MODE2	; //
+		case	5	: return	LIM_MODE1	; //	
+		case	6	: return	LIM_MODE1	; //	
+		case	7	: return	LIM_MODE0	; //	
+		case	8	: return	LIM_MODE2	; //	
+		case	9	: return	LIM_MODE2	; //	
+		case	10	: return	LIM_MODE2	; //	
+		case	11	: return	LIM_MODE1	; //	or 0
+		case	12	: return	LIM_MODE0	; //	
+		case	13	: return	LIM_MODE2	; //	
 	}
 
-	return 0; // fallback ... this should be most robust against EMI
+	return LIM_MODE0; // fallback ... this should be most robust against EMI
 }
+
+static uint8_t wifi_current_ch = 0;
+static led_interval_mode_t current_interval_mode = LIM_AUTO;
+
+static void set_i2s_div_from_current_interval_index()
+{
+	set_i2s_div_pat(timer_interval_values[current_interval_index].freq_div,
+		timer_interval_values[current_interval_index].clock_pattern);
+}
+
+static void led_set_interval_mode()
+{
+	switch(current_interval_mode)
+	{
+	case LIM_AUTO:
+		current_interval_index =
+			(int)led_interval_mode_from_channel(wifi_current_ch) - (int)LIM_MODE0;
+		set_i2s_div_from_current_interval_index();
+		led_start_pwm_clock();
+		break;
+
+	case LIM_MODE0:
+	case LIM_MODE1:
+	case LIM_MODE2:
+		current_interval_index = (int)current_interval_mode - (int)LIM_MODE0;
+		set_i2s_div_from_current_interval_index();
+		led_start_pwm_clock();
+		break;
+
+	case LIM_PWM_OFF:
+		current_interval_index = 0;
+		led_stop_pwm_clock();
+		break;
+	}
+}
+
+void led_set_interval_mode(led_interval_mode_t mode)
+{
+	current_interval_mode = mode;
+	led_set_interval_mode();
+}
+
+led_interval_mode_t led_get_interval_mode()
+{
+	return current_interval_mode;
+}
+
 
 void led_set_interval_mode_from_channel(uint8_t ch)
 {
-	led_set_interval_mode(led_interval_mode_from_channel(ch));
+	wifi_current_ch = ch;
+	led_set_interval_mode();
 }
+
 
 #if 0
 #define W 160
@@ -1114,7 +1155,7 @@ if(current_row == 0)
 	static uint32_t next = millis() + 1000;
 	if(millis() >= next)
 	{
-		Serial.printf("interval:%d int_cnt:%d ovrn:%d last_ovrn_p:%d rssi=%d chan=%d mode=%d %04x\r\n", timer_interval_values[current_interval_mode].timer_interval, interrupt_count, (int)interrupt_overrun, last_overrun_phase, WiFi.RSSI(), WiFi.channel(), current_interval_mode, button_read);
+		Serial.printf("interval:%d int_cnt:%d ovrn:%d last_ovrn_p:%d rssi=%d chan=%d mode=%d %04x\r\n", timer_interval_values[current_interval_index].timer_interval, interrupt_count, (int)interrupt_overrun, last_overrun_phase, WiFi.RSSI(), WiFi.channel(), current_interval_index, button_read);
 
 		interrupt_count = 0;
 		interrupt_overrun = false;

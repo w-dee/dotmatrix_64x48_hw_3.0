@@ -252,11 +252,11 @@ const PROGMEM unsigned char font_5x5_data[][5] = {
 "@@@@ "_b,
 },
 { // 0x43 C
-" @@@ "_b,
-"@   @"_b,
+" @@@@"_b,
 "@    "_b,
-"@   @"_b,
-" @@@ "_b,
+"@    "_b,
+"@    "_b,
+" @@@@"_b,
 },
 { // 0x44 D
 "@@@@ "_b,
@@ -467,8 +467,8 @@ const PROGMEM unsigned char font_5x5_data[][5] = {
 { // 0x61 a
 "     "_b,
 "     "_b,
-"  @@ "_b,
-" @ @ "_b,
+" @@@ "_b,
+"@  @ "_b,
 " @@@@"_b,
 },
 { // 0x62 b
@@ -494,10 +494,10 @@ const PROGMEM unsigned char font_5x5_data[][5] = {
 },
 { // 0x65 e
 "     "_b,
-" @   "_b,
-"@ @  "_b,
-"@@   "_b,
 " @@  "_b,
+"@  @ "_b,
+"@@@  "_b,
+" @@@@"_b,
 },
 { // 0x66 f
 "  @@ "_b,
@@ -602,7 +602,7 @@ const PROGMEM unsigned char font_5x5_data[][5] = {
 " @   "_b,
 "@@@@ "_b,
 " @   "_b,
-" @@@ "_b,
+"  @@ "_b,
 },
 { // 0x75 u
 "     "_b,

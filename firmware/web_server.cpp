@@ -63,7 +63,7 @@ static void web_server_ota_upload_handler()
 
 	HTTPUpload& upload = server.upload();
 	if(upload.status == UPLOAD_FILE_START){
-		led_stop_pwm_clock(); // stop harmful LED PWM clock which will interfere with WiFi.
+		led_set_interval_mode(LIM_PWM_OFF); // stop harmful LED PWM clock which will interfere with WiFi.
 		Serial.setDebugOutput(true);
 		WiFiUDP::stopAll();
 		Serial.printf_P(PSTR("Update: %s\n"), upload.filename.c_str());

@@ -143,7 +143,7 @@ static void ICACHE_RAM_ATTR timer_record_handler()
 /**
  * reset GPIO2 and set low
  */
-static void ICACHE_RAM_ATTR ir_stop_gpio_output()
+static void ICACHE_RAM_ATTR ir_stop_serial_output()
 {
 	constexpr int pin = 2;
 	GPF(pin) = GPFFS(GPFFS_GPIO(pin));//Set mode to GPIO
@@ -186,7 +186,7 @@ static void ICACHE_RAM_ATTR timer_replay_handler()
 	{
 		// irs is not IRR_POS
 		// force stop sending 0x5b
-		ir_stop_gpio_output();
+		ir_stop_serial_output();
 	}
 	ir_record_status = irs;
 }
@@ -257,7 +257,7 @@ void ir_init()
 	digitalWrite(2, LOW);
 	Serial1.begin(113960, SERIAL_7N1, SERIAL_TX_ONLY, 2);
 	U1C0 |= (1<<UCTXI); // invert TX
-	ir_stop_gpio_output();
+	ir_stop_serial_output();
 
 
 	/*
@@ -312,4 +312,14 @@ void ir_replay()
  * get current status
  */
 ir_status_t ir_get_status() { return ir_status; }
+
+/**
+ * Stop sending IR control and reset output pin as GPIO
+ */
+void ir_stop()
+{
+	stop_timer();
+	ir_status = IR_NONE;
+	ir_stop_serial_output();
+}
 

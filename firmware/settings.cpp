@@ -3,6 +3,7 @@
 #include <FS.h>
 #include "libb64/cdecode.h"
 #include "libb64/cencode.h"
+#include "settings.h"
 
 extern FS SETTINGS_SPIFFS;
 extern FS SPIFFS;
@@ -45,9 +46,26 @@ static bool settings_check_crc(File & file)
 // write checksum 
 
 //! write a non-string setting to specified settings entry
-bool settings_write(const String & key, const void * ptr, size_t size)
+bool settings_write(const String & key, const void * ptr, size_t size, settings_overwrite_t overwrite)
 {
 	if(key.length()  > MAX_KEY_LEN) return false;
+
+	if(overwrite == SETTINGS_NO_OVERWRITE)
+	{
+		// check key existence
+		const char mode[2]  = { 'r',  0  };
+		File file = SETTINGS_SPIFFS.open(key, mode);
+		if(file)
+		{
+			if(settings_check_crc(file))
+			{
+				// valid key already exists; do not overwrite.
+				file.close();
+				return false;
+			}
+		}
+		file.close();	
+	}
 
 	const char mode[2]  = { 'w',  0  };
 	File file = SETTINGS_SPIFFS.open(key, mode);
@@ -66,9 +84,9 @@ bool settings_write(const String & key, const void * ptr, size_t size)
 }
 
 //! write a string setting to specified settings entry
-bool settings_write(const String & key, const String & value)
+bool settings_write(const String & key, const String & value, settings_overwrite_t overwrite)
 {
-	return settings_write(key, value.c_str(), value.length());
+	return settings_write(key, value.c_str(), value.length(), overwrite);
 }
 
 

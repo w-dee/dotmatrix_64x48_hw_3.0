@@ -1,13 +1,13 @@
 #include <Arduino.h>
 #include <vector>
 #include <algorithm>
-#include <Ticker.h>
 #include "ui.h"
 #include "ir_control.h"
 #include "buttons.h"
 #include "frame_buffer.h"
 #include "matrix_drive.h"
 #include "wifi.h"
+#include "pendulum.h"
 
 // undefining min and max are needed to include <vector>
 #undef min
@@ -71,18 +71,26 @@ private:
 
 class screen_manager_t
 {
+	pendulum_t pendulum;
 	transition_t transition; //!< current running transition
-	bool in_transition; //! whether the transition is under progress
+	bool in_transition; //!< whether the transition is under progress
 	std::vector<screen_base_t *> stack;
 	bool stack_changed;
-	int8_t tick_interval_50 = 0; // to count 10ms tick to process 50ms things
-	int8_t tick_interval_20 = 0; // to count 10ms tick to process 20ms things
+	int8_t tick_interval_50 = 0; //!< to count 10ms tick to process 50ms things
 	int8_t blink_intensity = 0; //!< cursor blink intensity value
+	static uint32_t constexpr process_interval = 10; //!< process interval in ms
+	static uint32_t constexpr process_delay_limit = 9; //!< allowable process delay limit in ms
+	uint32_t next_millis; //!< next expected processing mills
+	bool processing = false; //!< whether processing is ongoing or not
 
 public:
-	screen_manager_t()
+	screen_manager_t() :
+		pendulum(std::bind(&screen_manager_t::process, this), process_interval) // 10ms interval
 	{
-		transition = t_none; in_transition = false; stack_changed = false;
+		transition = t_none;
+		in_transition = false;
+		stack_changed = false;
+		next_millis = millis() + process_interval;
 	}
 
 	void show(transition_t tran)
@@ -122,8 +130,28 @@ public:
 		}
 	}
 
-public:
+protected:
 	void process()
+	{
+		if(processing) return; // prevent reentrance
+		processing = true;
+		uint32_t now = millis();
+		if((int32_t)((next_millis + process_delay_limit) - now) >= 0)
+		{
+			// process called on time
+			_process();
+			next_millis += process_interval;
+		}
+		else
+		{
+			// process too slow
+			next_millis = now + process_interval;
+		}
+		processing = false;
+	}
+
+
+	void _process()
 	{
 		size_t sz = stack.size();
 		if(sz)
@@ -140,7 +168,7 @@ public:
 
 				// care must be taken,
 				// the screen may be poped (removed) during button event
-				if(!stack_changed && tick_interval_20 == 0)
+				if(!stack_changed && tick_interval_50 == 0)
 				{
 					// dispatch draw event
 					top->draw();
@@ -163,11 +191,10 @@ public:
 		}
 		++tick_interval_50;
 		if(tick_interval_50 == 5) { tick_interval_50 = 0; blink_intensity += 21; }
-		++tick_interval_20;
-		if(tick_interval_20 == 5) { tick_interval_20 = 0; }
 	}
 
 
+public:
 	/**
 	 * Get cursor blink intensity
 	 */
@@ -359,6 +386,8 @@ public:
 	}
 
 protected:
+	virtual bool validate(const String &line) { return true; }
+
 	void draw() override
 	{
 		// erase
@@ -516,7 +545,11 @@ protected:
 			if(y == 0)
 			{
 				// ok, return
-				on_ok(line);
+				String _line = line;
+				// make the string on stack, because in on_ok(),
+				// the implementer may call screen_manager.pop(),
+				// which leads to delete thisself.
+				if(validate(_line)) on_ok(_line);
 			}
 			else if(y == 1)
 			{
@@ -578,12 +611,19 @@ public:
 	{
 		char_list = { F("BS DEL"), F("56789."), F("01234") };
 	}
+
+protected:
+	bool validate(const String &line) override
+	{
+		IPAddress addr;
+		return addr.fromString(line); // IPAddress::fromString validates the string
+	}
 };
 
 //! Menu list UI
 class screen_menu_t : public screen_base_t
 {
-protected:
+private:
 	String title;
 	string_vector items;
 
@@ -606,6 +646,18 @@ public:
 	}
 
 protected:
+	string_vector & get_items() { return items; }
+
+	void set_selected(int i)
+	{
+		if(i < items.size())
+		{
+			y = i;
+			if(y_top > y) y_top = y;
+			if(y_top < y - (max_lines - 1)) y_top = y - (max_lines - 1);
+		}
+	}
+
 	void draw() override
 	{
 		// erase
@@ -667,70 +719,152 @@ protected:
 		}
 	}
 
+
+
 	virtual void on_ok(int item_idx) {;} //!< when the user pressed OK butotn
 	virtual void on_cancel() {;} //!< when the user pressed CANCEL butotn
 
+
 };
+
+
 
 class screen_dns_2_editor_t : public screen_ip_editor_t
 {
+	ip_addr_settings_t settings;
 public:
-	screen_dns_2_editor_t() : screen_ip_editor_t(F("DNS Srvr 2"), F("")) {}
+	screen_dns_2_editor_t(const ip_addr_settings_t & _settings) :
+		screen_ip_editor_t(F("DNS Srvr 2"), F("")), settings(_settings) {}
 
 protected:
 	void on_ok(const String & line) override
 	{
+		settings.dns2 = line;
+
+		// set manual ip config
+		wifi_manual_ip_info(settings);
+
 		screen_manager.pop();
 	} 
+
+	void on_cancel() override
+	{
+		screen_manager.pop();
+	}
 };
 
 
 class screen_dns_1_editor_t : public screen_ip_editor_t
 {
+	ip_addr_settings_t settings;
 public:
-	screen_dns_1_editor_t() : screen_ip_editor_t(F("DNS Srvr 1"), F("")) {}
+	screen_dns_1_editor_t(const ip_addr_settings_t & _settings) :
+		screen_ip_editor_t(F("DNS Srvr 1"), F("")), settings(_settings) {}
 
 protected:
 	void on_ok(const String & line) override
 	{
+		settings.dns1 = line;
+		auto new_screen = new screen_dns_2_editor_t(settings);
 		screen_manager.pop();
-		screen_manager.push(new screen_dns_2_editor_t());
+		screen_manager.push(new_screen);
 	} 
+
+	void on_cancel() override
+	{
+		screen_manager.pop();
+	}
 };
 
 
 class screen_net_mask_editor_t : public screen_ip_editor_t
 {
+	ip_addr_settings_t settings;
 public:
-	screen_net_mask_editor_t() : screen_ip_editor_t(F("Net Mask"), F("")) {}
+	screen_net_mask_editor_t(const ip_addr_settings_t & _settings) :
+		screen_ip_editor_t(F("Net Mask"), F("")), settings(_settings) {}
+
+protected:
+	bool validate(const String &line) override
+	{
+		IPAddress addr;
+		if(!addr.fromString(line)) return false; // IPAddress::fromString validates the string
+
+		// is valid netmask ??
+		// lower index is higher octet;
+		uint32_t v = (addr[0] << 24) + (addr[1] << 16) + (addr[2] << 8) + (addr[3] << 0);
+		v = 0 - (~v); // 0xffffffff -> 0, 0xffffff00 -> 0x00000100, 0xffff0000 -> 0x00010000 and so on
+		// at this point popcount of v must be 0 or 1 if the mask is valid
+		int cnt = 0;
+		while(v) { if(v & 1) ++cnt; v >>= 1; }
+		if(cnt == 0 || cnt == 1) return true;
+		return false;
+	}
+
+	void on_ok(const String & line) override
+	{
+		settings.ip_mask = line;
+		auto new_screen = new screen_dns_1_editor_t(settings);
+		screen_manager.pop();
+		screen_manager.push(new_screen);
+	} 
+
+	void on_cancel() override
+	{
+		screen_manager.pop();
+	}
+};
+
+class screen_ip_gateway_editor_t : public screen_ip_editor_t
+{
+	ip_addr_settings_t settings;
+public:
+	screen_ip_gateway_editor_t(const ip_addr_settings_t & _settings) :
+		screen_ip_editor_t(F("Net Mask"), F("")), settings(_settings) {}
 
 protected:
 	void on_ok(const String & line) override
 	{
+		settings.ip_gateway = line;
+		auto new_screen = new screen_net_mask_editor_t(settings);
 		screen_manager.pop();
-		screen_manager.push(new screen_dns_1_editor_t());
+		screen_manager.push(new_screen);
 	} 
+
+	void on_cancel() override
+	{
+		screen_manager.pop();
+	}
 };
 
 
 class screen_ip_addr_editor_t : public screen_ip_editor_t
 {
+	ip_addr_settings_t settings;
 public:
-	screen_ip_addr_editor_t() : screen_ip_editor_t(F("IP Addr"), F("")) {}
+	screen_ip_addr_editor_t(const ip_addr_settings_t & _settings) :
+		screen_ip_editor_t(F("IP Addr"), F("")), settings(_settings) {}
 
 protected:
 	void on_ok(const String & line) override
 	{
-		screen_manager.pop();
-		screen_manager.push(new screen_net_mask_editor_t());
+		settings.ip_addr = line;
+		auto new_screen = new screen_ip_gateway_editor_t(settings);
+		screen_manager.pop(); // note at this point 'this' is deleted
+		screen_manager.push(new_screen);
 	} 
+
+	void on_cancel() override
+	{
+		screen_manager.pop();
+	}
 };
 
 class screen_dhcp_mode_t : public screen_menu_t
 {
 public:
 	screen_dhcp_mode_t() : screen_menu_t(
-				F("DHCP mode"),{
+				F("DHCP Mode"),{
 					F("Use DHCP  "),
 					F("Manual IP >"),
 				} ) {	}
@@ -741,10 +875,14 @@ protected:
 		switch(idx)
 		{
 		case 0: // Use DHCP
+			wifi_manual_ip_info(ip_addr_settings_t()); // clear manual settings
+			screen_manager.pop();
 			break;
 
 		case 1: // Manual IP
-			screen_manager.push(new screen_ip_addr_editor_t());
+			screen_manager.push(
+				new screen_ip_addr_editor_t(
+					wifi_get_ip_addr_settings()));
 			break;
 		}
 	}
@@ -755,6 +893,56 @@ protected:
 	}
 };
 
+class screen_ap_pass_editor_t : public screen_ascii_editor_t
+{
+	String ap_name;
+public:
+	screen_ap_pass_editor_t(const String &_ap_name) :
+		screen_ascii_editor_t(F("AP Pass"), wifi_get_ap_pass()), ap_name(_ap_name)
+	{
+	}
+
+protected:
+	void on_ok(const String & line) override
+	{
+		// set wifi AP name and password, then pop
+		wifi_set_ap_info(ap_name, line);
+		screen_manager.pop();
+	}
+
+	void on_cancel() override
+	{
+		screen_manager.pop();
+	}
+
+	
+};
+
+
+
+class screen_ap_name_editor_t : public screen_ascii_editor_t
+{
+public:
+	screen_ap_name_editor_t() : screen_ascii_editor_t(F("AP Name"), wifi_get_ap_name())
+	{
+	}
+
+protected:
+	void on_ok(const String & line) override
+	{
+		screen_manager.pop();
+		screen_manager.push(new screen_ap_pass_editor_t(line));
+	}
+
+	void on_cancel() override
+	{
+		screen_manager.pop();
+	}
+
+	
+};
+
+
 class screen_ap_list_t : public screen_menu_t
 {
 	int num_stations; //!< number of stations scaned
@@ -764,6 +952,9 @@ public:
 		num_stations(_num_stations)
 	{
 		set_h_scroll(true);
+		// Push "-- Manual AP Name Input --"
+		get_items().push_back(F("-- Manual AP Name Input --"));
+
 		// Push station names order by its rssi.
 		// Here we use naiive method to sort the list...
 		// Assumes the list is not so big.
@@ -772,7 +963,7 @@ public:
 			for(int i = 0; i < num_stations; ++i)
 			{
 				if(WiFi.RSSI(i) == rssi)
-					items.push_back(WiFi.SSID(i));
+					get_items().push_back(WiFi.SSID(i));
 			}
 		}
 		// Delete scanned list to release precious heap
@@ -780,6 +971,23 @@ public:
 	}
 
 protected:
+	void on_ok(int idx) override
+	{
+		if(idx == 0)
+		{
+			// Manual AP Name Input
+			screen_manager.pop();
+			screen_manager.push(new screen_ap_name_editor_t());
+		}
+		else
+		{
+			// input password for the AP
+			String name = get_items()[idx]; // copy AP name before pop()
+			screen_manager.pop();
+			screen_manager.push(new screen_ap_pass_editor_t(name));
+		}
+	}
+
 	void on_cancel() override
 	{
 		screen_manager.pop();
@@ -824,13 +1032,80 @@ protected:
 		{
 			// scan complete but no APs found
 			screen_manager.pop();
-			screen_manager.push(new screen_message_box_t(F("AP List"), {F("No APs"), F("Found")}));
+			screen_manager.push(new screen_ap_list_t(0));
 		}
 	}
 
 };
 
-//				F("\u2082\u2081\u2083\u208f\u2082\u2081\u2083\u208f\u2082\u2081\u2083\u208f\u2082\u2081\u2083"),{
+class screen_wps_processing_t : public screen_base_t
+{
+	String line[2];
+	bool done = false;
+	bool first = true;
+
+public:
+	screen_wps_processing_t() : line { F("Waiting"), F("WPS") }
+	{
+
+	}
+
+	void draw() override
+	{
+		// erase
+		fb().fill(0, 0, LED_MAX_LOGICAL_COL, LED_MAX_LOGICAL_ROW, 0);
+
+		// draw the text
+		fb().draw_text(0, 12, get_blink_intensity(), line[0].c_str(), font_5x5);
+		fb().draw_text(0, 18, get_blink_intensity(), line[1].c_str(), font_5x5);
+
+		// show the drawn content
+		show();
+
+		// if first draw, begin WPS config
+		if(first)
+		{
+			first = false;
+			wifi_wps(); // this function will not return until wps done
+			done = true;
+		}
+	}
+
+protected:
+	void on_idle_50() override
+	{
+		// TODO: show WPS configuration result
+		if(done) screen_manager.pop();
+	}
+
+};
+
+class screen_emi_reduct_t : public screen_menu_t
+{
+public:
+	screen_emi_reduct_t() : screen_menu_t(
+		F("EMI Reduct"), {
+			F("Auto"),
+			F("26.67MHz"),
+			F("16.00MHz"),
+			F("13.33MHz"),
+			F("Off") } ) 
+	{
+		set_selected( (int)led_get_interval_mode() );
+	}
+
+protected:
+	void on_ok(int idx) override
+	{
+		led_set_interval_mode((led_interval_mode_t) idx);
+		screen_manager.pop();
+	}
+
+	void on_cancel() override
+	{
+		screen_manager.pop();
+	}
+};
 
 class screen_wifi_setting_t : public screen_menu_t
 {
@@ -839,7 +1114,8 @@ public:
 				F("WiFi config"),{
 					F("WPS       >"),
 					F("AP List   >"),
-					F("DHCP mode >"),
+					F("DHCP Mode >"),
+					F("EMI Reduct>"),
 				} ) {	}
 
 protected:
@@ -848,6 +1124,7 @@ protected:
 		switch(idx)
 		{
 		case 0: // WPS
+			screen_manager.push(new screen_wps_processing_t());
 			break;
 
 		case 1: // AP List
@@ -857,50 +1134,16 @@ protected:
 		case 2: // DHCP mode
 			screen_manager.push(new screen_dhcp_mode_t());
 			break;
+
+		case 3: // EMI Reduct
+			screen_manager.push(new screen_emi_reduct_t());
+			break;
 		}
 	}
 
 };
 
 
-
-//! channel test ui
-class screen_channel_test_t : public screen_base_t
-{
-	int div = 0;
-
-protected:
-	void on_button(uint32_t button) override
-	{
-		switch(button)
-		{
-		case BUTTON_OK:
-			// ok button; return
-			return;
-
-		case BUTTON_CANCEL:
-			// fill framebuffer with 0xff
-			return;
-
-		case BUTTON_LEFT:
-		case BUTTON_RIGHT:
-			// vertical line test
-			if(button == BUTTON_LEFT) --div;
-			if(button == BUTTON_RIGHT) ++div;
-			if(div < 0) div = 0;
-			if(div >= LED_NUM_INTERVAL_MODE) div = LED_NUM_INTERVAL_MODE - 1;
-			led_set_interval_mode(div);
-			get_current_frame_buffer().fill(0, 0, 5, 1, 0);
-			get_current_frame_buffer().fill(0, 0, div + 1, 1, 0xff);
-			return;
-
-		case BUTTON_UP:
-		case BUTTON_DOWN:
-			return;
-		}
-
-	}
-};
 
 #if 0
 static void ui_loop()
@@ -956,12 +1199,18 @@ static void ui_loop()
 }
 #endif
 
-static void ui_ticker() { screen_manager.process(); }
+//! main clock ui
+class screen_clock_t : public screen_base_t
+{
+	void draw() override
+	{
+		// erase
+	}
+};
+
 
 void ui_setup()
 {
-	static Ticker ticker;
-	ticker.attach_ms(10, &ui_ticker);
 
 //	screen_manager.push(new screen_ascii_editor_t("0123456789qwe"));
 //	screen_manager.push(new screen_ip_editor_t("IP addr", "012.88.77.65"));

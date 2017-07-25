@@ -14,6 +14,7 @@
 #include "settings.h"
 #include "web_server.h"
 #include "wifi.h"
+#include "calendar.h"
 
 #include "spiffs_api.h"
 extern "C" uint32_t _SPIFFS_start;
@@ -62,28 +63,6 @@ void setup(void){
 
   Serial.begin(115200);
   Serial.print("\r\n\r\nWelcome\r\n");
-  
-  
-  ir_init();
-  led_init();
-  wifi_setup();
-
-  Wire.begin(WIRE_SDA, WIRE_SCL);
-
-
-  bme280.begin();
-  bme280.setMode(BME280_MODE_NORMAL, BME280_TSB_1000MS, BME280_OSRS_x1, BME280_OSRS_x1, BME280_OSRS_x1, BME280_FILTER_OFF);
-
-
-	  if (MDNS.begin("esp8266")) {
-		Serial.println("MDNS responder started");
-	  }
-
-	web_server_setup();
-
-	Serial.printf("Flash size : %d %08x\r\n", ESP.getFlashChipSize(), (uint32_t)_SPIFFS_start);
-
-	Serial.printf("%08x\r\n", *reinterpret_cast<uint32_t*>(BFF_FONT_FILE_START_ADDRESS + 0x40200000));
 
 	FSInfo info;
 
@@ -106,6 +85,30 @@ void setup(void){
 	Serial.printf("pageSize      : %d\r\n", info.pageSize);
 	Serial.printf("maxOpenFiles  : %d\r\n", info.maxOpenFiles);
 	Serial.printf("maxPathLength : %d\r\n", info.maxPathLength);
+
+	wifi_init_settings();
+
+  ir_init();
+  led_init();
+  wifi_setup();
+  calendar_init();
+
+  Wire.begin(WIRE_SDA, WIRE_SCL);
+
+
+  bme280.begin();
+  bme280.setMode(BME280_MODE_NORMAL, BME280_TSB_1000MS, BME280_OSRS_x1, BME280_OSRS_x1, BME280_OSRS_x1, BME280_FILTER_OFF);
+
+
+	  if (MDNS.begin("esp8266")) {
+		Serial.println("MDNS responder started");
+	  }
+
+	web_server_setup();
+
+	Serial.printf("Flash size : %d %08x\r\n", ESP.getFlashChipSize(), (uint32_t)_SPIFFS_start);
+
+	Serial.printf("%08x\r\n", *reinterpret_cast<uint32_t*>(BFF_FONT_FILE_START_ADDRESS + 0x40200000));
 
 	Serial.printf("\r\n""PortGetFreeHeapSize: %d\r\n", xPortGetFreeHeapSize());
 

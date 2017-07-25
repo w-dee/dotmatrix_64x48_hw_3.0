@@ -19,5 +19,6 @@ void ir_replay();
 
 ir_status_t ir_get_status();
 
+void ir_stop();
 #endif
 

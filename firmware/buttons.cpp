@@ -20,7 +20,7 @@ uint8_t buttons[MAX_BUTTONS] = {0};
  */
 static uint8_t button_debounce_counter[MAX_BUTTONS] = {0};
 
-#define BUTTON_DEBOUNCE_COUNT 2
+#define BUTTON_DEBOUNCE_COUNT 4
 #define BUTTON_INITIAL_REPEAT_DELAY 50
 #define BUTTON_REPEAT_LIMIT 56
 
