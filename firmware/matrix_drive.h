@@ -11,6 +11,7 @@ enum led_interval_mode_t {
 };
 
 void led_init();
+void led_write_settings();
 extern uint32_t button_read;
 void led_start_pwm_clock();
 void led_stop_pwm_clock();

@@ -5,6 +5,7 @@
 #include "frame_buffer.h"
 #include "matrix_drive.h"
 #include "panic.h"
+#include "settings.h"
 
 #define LED_COL_SER_GPIO 13 // 13=MOSI
 #define LED_COL_LATCH_GPIO 12 // 12=MISO, but in DIO mode, it acts as second line of MOSI
@@ -910,6 +911,9 @@ static void led_init_timer()
 }
 
 
+static uint8_t wifi_current_ch = 0;
+static led_interval_mode_t current_interval_mode = LIM_AUTO;
+
 /**
  * Initialize LED matrix driver
  */
@@ -924,11 +928,23 @@ void led_init()
 	led_init_spi_and_ledclock();
 	led_init_led1642();
 	led_init_timer();
-	led_set_interval_mode(LIM_AUTO);
-
 	led_start_pwm_clock();
+
+	delay(3000);
+
+	// restore led interval mode
+	bool res = settings_write(F("led_interval_mode"), F("0"), SETTINGS_NO_OVERWRITE);
+	String strval;
+	res = settings_read(F("led_interval_mode"), strval);
+
+	led_set_interval_mode( (led_interval_mode_t) strval.toInt());
+
 }
 
+void led_write_settings()
+{
+	settings_write(F("led_interval_mode"), String((long)current_interval_mode, /*base = */10));
+}
 
 /**
  * LED uninitialization
@@ -967,16 +983,13 @@ static led_interval_mode_t led_interval_mode_from_channel(uint8_t ch)
 	return LIM_MODE0; // fallback ... this should be most robust against EMI
 }
 
-static uint8_t wifi_current_ch = 0;
-static led_interval_mode_t current_interval_mode = LIM_AUTO;
-
 static void set_i2s_div_from_current_interval_index()
 {
 	set_i2s_div_pat(timer_interval_values[current_interval_index].freq_div,
 		timer_interval_values[current_interval_index].clock_pattern);
 }
 
-static void led_set_interval_mode()
+static void _led_set_interval_mode()
 {
 	switch(current_interval_mode)
 	{
@@ -1005,7 +1018,7 @@ static void led_set_interval_mode()
 void led_set_interval_mode(led_interval_mode_t mode)
 {
 	current_interval_mode = mode;
-	led_set_interval_mode();
+	_led_set_interval_mode();
 }
 
 led_interval_mode_t led_get_interval_mode()
@@ -1017,7 +1030,7 @@ led_interval_mode_t led_get_interval_mode()
 void led_set_interval_mode_from_channel(uint8_t ch)
 {
 	wifi_current_ch = ch;
-	led_set_interval_mode();
+	_led_set_interval_mode();
 }
 
 

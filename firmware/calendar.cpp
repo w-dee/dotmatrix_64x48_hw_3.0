@@ -7,7 +7,8 @@ extern "C" {
 }
 
 // TODO: The default SNTP implementation lacks sub-second
-// precision, Year 2038 problem workaround, ... etc.
+// precision, Year 2038 problem workaround,
+// sub-hour timezone settings like UTC+12:45, daylight time ... etc.
 // I'll write another SNTP implementation soon.
 
 void calendar_init()
@@ -26,5 +27,22 @@ static void calendar_tick()
 }
 
 static pendulum_t pendulum(&calendar_tick, 1000);
+
+void calendar_get_time(calendar_tm & tm)
+{
+	time_t t = sntp_get_current_timestamp();
+//	sntp_localtime_r(&t, &tm);
+}
+
+static string_vector ntp_servers;
+
+string_vector calendar_get_ntp_server() { return ntp_servers; }
+
+void calendar_set_ntp_server(const string_vector & servers)
+{
+	if(servers.size() > MAX_NTP_SERVERS) return;
+
+	ntp_servers = servers;
+}
 
 

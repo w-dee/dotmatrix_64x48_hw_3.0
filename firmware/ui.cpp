@@ -8,19 +8,14 @@
 #include "matrix_drive.h"
 #include "wifi.h"
 #include "pendulum.h"
+#include "settings.h"
 
-// undefining min and max are needed to include <vector>
-#undef min
-#undef max
-#include <vector>
 #include <functional>
 
 #include "fonts/font_5x5.h"
 #include "fonts/font_bff.h"
 #include "fonts/font_aa.h"
 
-
-typedef std::vector<String> string_vector;
 
 enum transition_t { t_none };
 
@@ -35,6 +30,9 @@ public:
 	virtual ~screen_base_t() {;}
 
 protected:
+
+	static constexpr int num_w_chars = 10; //!< maximum chars in a horizontal line
+
 	//! Called when a button is pushed
 	virtual void on_button(uint32_t button) {;}
 
@@ -46,7 +44,7 @@ protected:
 
 	//! Draw content; this function is automatically called 20ms
 	//! intervally to refresh the content
-	virtual void draw() {;}
+	virtual bool draw() {;}
 
 	//! Call this when the screen content is written and need to be showed
 	void show(transition_t transition = t_none);
@@ -171,7 +169,9 @@ protected:
 				if(!stack_changed && tick_interval_50 == 0)
 				{
 					// dispatch draw event
-					top->draw();
+					// erase background
+					get_bg_frame_buffer().fill(0, 0, LED_MAX_LOGICAL_COL, LED_MAX_LOGICAL_ROW, 0);
+					if(top->draw()) show(t_none);
 				}
 
 				// care must be taken again
@@ -256,11 +256,8 @@ public:
 	// TODO: scroll and text formatting
 
 protected:
-	void draw() override
+	bool draw() override
 	{
-		// erase
-		fb().fill(0, 0, LED_MAX_LOGICAL_COL, LED_MAX_LOGICAL_ROW, 0);
-
 		// draw title
 		fb().draw_text(0, 0, 255, title.c_str(), font_5x5);
 
@@ -274,8 +271,7 @@ protected:
 					255, lines[i].c_str(), font_5x5);
 		}
 
-		// show the drawn content
-		show();
+		return true;
 	}
 
 	void on_button(uint32_t button) override
@@ -343,8 +339,6 @@ protected:
 class screen_ascii_editor_t : public screen_base_t
 {
 protected:
-
-	static constexpr int num_w_chars = 10; //!< maximum chars in a horizontal line
 	static constexpr int num_char_list_display_lines = 6; //!< maximum display-able lines of char list
 	static constexpr int char_list_start_y = 7+6; // character list start position y in pixel
 
@@ -388,11 +382,8 @@ public:
 protected:
 	virtual bool validate(const String &line) { return true; }
 
-	void draw() override
+	bool draw() override
 	{
-		// erase
-		fb().fill(0, 0, LED_MAX_LOGICAL_COL, LED_MAX_LOGICAL_ROW, 0);
-
 		// draw title
 		fb().draw_text(0, 0, 255, title.c_str(), font_5x5);
 
@@ -432,7 +423,7 @@ protected:
 		}
 
 		// show the drawn content
-		show();
+		return true;
 	}
 
 	/**
@@ -623,15 +614,17 @@ protected:
 //! Menu list UI
 class screen_menu_t : public screen_base_t
 {
-private:
+protected:
 	String title;
 	string_vector items;
 
-	static constexpr int max_lines = 6; //!< maximum item lines per a screen
+	int max_lines = 6; //!< maximum item lines per a screen
 	int x = 0; //!< left most column to be displayed
 	int y = 0; //!< selected item index
 	int y_top = 0; //!< display start index at top line of the items
 	bool h_scroll = false; //!< whether to allow horizontal scroll
+	int title_line_y = 7; //!< title underline position in y axis
+	int list_start_y = 8; //!< menu item start position in y axis
 
 public:
 	screen_menu_t(const String &_title, const string_vector & _items) :
@@ -658,19 +651,16 @@ protected:
 		}
 	}
 
-	void draw() override
+	bool draw() override
 	{
-		// erase
-		fb().fill(0, 0, LED_MAX_LOGICAL_COL, LED_MAX_LOGICAL_ROW, 0);
-
 		// draw the title
 		fb().draw_text(0, 0, 255, title.c_str(), font_5x5);
 
 		// draw line
-		fb().fill(0, 7, LED_MAX_LOGICAL_COL, 1, 128);
+		fb().fill(0, title_line_y, LED_MAX_LOGICAL_COL, 1, 128);
 
 		// draw cursor
-		fb().fill(2, (y - y_top)*6 + 8, LED_MAX_LOGICAL_COL - 2, 5, get_blink_intensity());
+		fb().fill(1, (y - y_top)*6 + list_start_y, LED_MAX_LOGICAL_COL - 1, 5, get_blink_intensity());
 
 		// draw items
 		for(int i = 0; i < max_lines; ++ i)
@@ -678,7 +668,7 @@ protected:
 			if(i + y_top < items.size())
 			{
 				if(x < items[i + y_top].length() - 1)
-					fb().draw_text(1, i * 6 + 8, 255, items[i + y_top].c_str() + x, font_5x5);
+					fb().draw_text(1, i * 6 + list_start_y, 255, items[i + y_top].c_str() + x, font_5x5);
 			}
 		}
 
@@ -718,16 +708,59 @@ protected:
 			break;
 		}
 	}
-
-
-
 	virtual void on_ok(int item_idx) {;} //!< when the user pressed OK butotn
 	virtual void on_cancel() {;} //!< when the user pressed CANCEL butotn
-
-
 };
 
 
+//! Menu list UI with scrolling marquee under title
+class screen_menu_with_marquee_t : public screen_menu_t
+{
+	String marquee;
+	int marquee_len; //!< length of marquee
+	int marquee_x; //!< marquee displaying x
+	int count = 0; //!< tick count
+
+public:
+	screen_menu_with_marquee_t(
+		const String &_title,
+		const String & _marquee,
+		const string_vector & _items) :
+			screen_menu_t(_title, _items)
+	{
+		title_line_y += 6;
+		list_start_y += 6;
+		-- max_lines;
+		set_marquee(_marquee);
+	}
+
+	void set_marquee(const String & m)
+	{
+		marquee = m + F(" ") + m + F(" ");
+		marquee_len = m.length() + 1;
+		if(marquee_len < num_w_chars)
+			marquee_x = 0;
+	}
+
+	bool draw() override
+	{
+		screen_menu_t::draw(); // call inherited class' draw()
+		fb().draw_text(-marquee_x, 6, 255, marquee.c_str(), font_5x5);
+		return true;
+	}
+
+	void on_idle_10() override
+	{
+		++ count;
+		if(count >= 3)
+		{
+			count = 0;
+
+			++ marquee_x;
+			if(marquee_x >= marquee_len * 6) marquee_x = 0;
+		}
+	}
+};
 
 class screen_dns_2_editor_t : public screen_ip_editor_t
 {
@@ -1005,17 +1038,14 @@ public:
 		WiFi.scanNetworks(/*async=*/true, /*show_hidden=*/false);
 	}
 
-	void draw() override
+	bool draw() override
 	{
-		// erase
-		fb().fill(0, 0, LED_MAX_LOGICAL_COL, LED_MAX_LOGICAL_ROW, 0);
-
 		// draw the text
 		fb().draw_text(0, 12, get_blink_intensity(), line[0].c_str(), font_5x5);
 		fb().draw_text(0, 18, get_blink_intensity(), line[1].c_str(), font_5x5);
 
 		// show the drawn content
-		show();
+		return true;
 	}
 
 protected:
@@ -1050,11 +1080,8 @@ public:
 
 	}
 
-	void draw() override
+	bool draw() override
 	{
-		// erase
-		fb().fill(0, 0, LED_MAX_LOGICAL_COL, LED_MAX_LOGICAL_ROW, 0);
-
 		// draw the text
 		fb().draw_text(0, 12, get_blink_intensity(), line[0].c_str(), font_5x5);
 		fb().draw_text(0, 18, get_blink_intensity(), line[1].c_str(), font_5x5);
@@ -1069,6 +1096,8 @@ public:
 			wifi_wps(); // this function will not return until wps done
 			done = true;
 		}
+
+		return true;
 	}
 
 protected:
@@ -1080,16 +1109,16 @@ protected:
 
 };
 
-class screen_emi_reduct_t : public screen_menu_t
+class screen_anti_emi_t : public screen_menu_t
 {
 public:
-	screen_emi_reduct_t() : screen_menu_t(
-		F("EMI Reduct"), {
+	screen_anti_emi_t() : screen_menu_t(
+		F("Anti-EMI"), {
 			F("Auto"),
-			F("26.67MHz"),
-			F("16.00MHz"),
-			F("13.33MHz"),
-			F("Off") } ) 
+			F("PWM26.7MHz"),
+			F("PWM16.0MHz"),
+			F("PWM13.3MHz"),
+			F("PWMClk Off") } ) 
 	{
 		set_selected( (int)led_get_interval_mode() );
 	}
@@ -1098,6 +1127,7 @@ protected:
 	void on_ok(int idx) override
 	{
 		led_set_interval_mode((led_interval_mode_t) idx);
+		led_write_settings();
 		screen_manager.pop();
 	}
 
@@ -1107,15 +1137,16 @@ protected:
 	}
 };
 
-class screen_wifi_setting_t : public screen_menu_t
+class screen_wifi_setting_t : public screen_menu_with_marquee_t
 {
+	typedef screen_menu_with_marquee_t inherited;
 public:
-	screen_wifi_setting_t() : screen_menu_t(
-				F("WiFi config"),{
+	screen_wifi_setting_t() : inherited(
+				F("WiFi config"), String(), {
 					F("WPS       >"),
 					F("AP List   >"),
 					F("DHCP Mode >"),
-					F("EMI Reduct>"),
+					F("Anti-EMI  >"),
 				} ) {	}
 
 protected:
@@ -1135,13 +1166,53 @@ protected:
 			screen_manager.push(new screen_dhcp_mode_t());
 			break;
 
-		case 3: // EMI Reduct
-			screen_manager.push(new screen_emi_reduct_t());
+		case 3: // Anti-EMI
+			screen_manager.push(new screen_anti_emi_t());
 			break;
 		}
 	}
 
+	void on_idle_50() override
+	{
+		inherited::on_idle_50();
+
+		String m;
+		if(wifi_get_ap_name().length() == 0)
+			m = F("WiFi AP not configured.");
+		else
+		{
+			switch(WiFi.status())
+			{
+			case WL_CONNECTED:
+				m = String(F("Connected to \"")) + wifi_get_ap_name() + F("\"");
+				if((uint32_t)WiFi.localIP() == 0)
+					m += String(F(", but no IP address got."));
+				else
+					m += String(F(", IP address is ")) + WiFi.localIP().toString() + F(" .");
+				break;
+
+			case WL_NO_SSID_AVAIL:
+				m = String(F("AP \"")) + wifi_get_ap_name() + F("\" not available.");
+				break;
+
+			case WL_CONNECT_FAILED:
+				m = String(F("Connection to \"")) + wifi_get_ap_name() + F("\" failed.");
+				break;
+
+			case WL_IDLE_STATUS: // ?? WTF ??
+				m = String(F("Connection to \"")) + wifi_get_ap_name() + F("\" is idling.");
+				break;
+
+			case WL_DISCONNECTED:
+				m = String(F("Disconnected from \"")) + wifi_get_ap_name() + F("\".");
+				break;
+			}
+		}
+
+		set_marquee(m);
+	}
 };
+
 
 
 
@@ -1202,9 +1273,10 @@ static void ui_loop()
 //! main clock ui
 class screen_clock_t : public screen_base_t
 {
-	void draw() override
+	bool draw() override
 	{
 		// erase
+		return true;
 	}
 };
 

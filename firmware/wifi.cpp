@@ -12,8 +12,16 @@
 	
 */
 
+static String ap_name;
+static String ap_pass;
+static ip_addr_settings_t ip_addr_settings;
+
+static void wifi_init_settings();
 void wifi_setup()
 {
+	// check settings fs
+	wifi_init_settings();
+
 	// first, disconnect wifi
 	WiFi.mode(WIFI_OFF);
 	WiFi.setPhyMode(WIFI_PHY_MODE_11N);
@@ -22,6 +30,8 @@ void wifi_setup()
 	// try to connect
 	WiFi.mode(WIFI_STA);
 	WiFi.setSleepMode(WIFI_NONE_SLEEP);
+	ap_name = ssid;
+	ap_pass = password;
 	WiFi.begin(ssid, password);
 }
 
@@ -68,11 +78,6 @@ void wifi_check()
 
 
 }
-
-static String ap_name;
-static String ap_pass;
-static ip_addr_settings_t ip_addr_settings;
-
 ip_addr_settings_t::ip_addr_settings_t()
 {
 	clear();
@@ -129,15 +134,15 @@ void wifi_start()
 /**
  * Read settings. Initialize settings to factory state, if the settings key is invalid
  */
-void wifi_init_settings()
+static void wifi_init_settings()
 {
-	settings_write(F("ap_name"), F(""), false);
-	settings_write(F("ap_pass"), F(""), false);
-	settings_write(F("ip_addr"), F("0.0.0.0"), false); // automatic ip configuration
-	settings_write(F("ip_gateway"), F("0.0.0.0"), false);
-	settings_write(F("ip_mask"), F("0.0.0.0"), false);
-	settings_write(F("dns_1"), F("0.0.0.0"), false);
-	settings_write(F("dns_2"), F("0.0.0.0"), false);
+	settings_write(F("ap_name"), F(""), SETTINGS_NO_OVERWRITE);
+	settings_write(F("ap_pass"), F(""), SETTINGS_NO_OVERWRITE);
+	settings_write(F("ip_addr"), F("0.0.0.0"), SETTINGS_NO_OVERWRITE); // automatic ip configuration
+	settings_write(F("ip_gateway"), F("0.0.0.0"), SETTINGS_NO_OVERWRITE);
+	settings_write(F("ip_mask"), F("0.0.0.0"), SETTINGS_NO_OVERWRITE);
+	settings_write(F("dns_1"), F("0.0.0.0"), SETTINGS_NO_OVERWRITE);
+	settings_write(F("dns_2"), F("0.0.0.0"), SETTINGS_NO_OVERWRITE);
 
 	settings_read(F("ap_name"), ap_name);
 	settings_read(F("ap_pass"), ap_pass);

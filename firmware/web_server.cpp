@@ -4,9 +4,10 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include <StreamString.h>
+#include <FS.h>
 #include "matrix_drive.h"
 #include "buttons.h"
-#include <FS.h>
+#include "settings.h"
 
 extern FS SPIFFS; // main FS
 
@@ -243,6 +244,8 @@ static void send_json_ok()
 	server.send(200, F("application/json"), F("{\"result\":\"ok\"}"));
 }
 
+static int last_import_error = 0;
+
 void web_server_setup()
 {
 	password = F("admin"); // initial password
@@ -272,6 +275,50 @@ void web_server_setup()
 		if(!send_common_header()) return; button_push(BUTTON_CANCEL); send_json_ok(); });
 	server.onNotFound(handleNotFound);
 
+	server.on(F("/settings/export"), HTTP_GET, [](){
+			String filename(F("export.tar"));
+			if(!send_common_header()) return;
+			server.sendHeader(F("Content-Disposition"),
+				F("attachment; filename=\"mazo3_settings.tar\""));
+			if(!settings_export(filename, String())) return;
+			File dataFile = SPIFFS.open(filename.c_str(), "r");
+			if (!dataFile) return;
+			server.streamFile(dataFile, F("application/tar"));
+			dataFile.close();
+		});
+
+	server.on(F("/settings/import"), HTTP_POST, [](){
+			Serial.println(F("\r\Import done.\r\n"));
+			if(!send_common_header()) return;
+			server.send(200, F("text/plain"), last_import_error ? F("Import failed. System will now reboot.") : F("Import done. System will now reboot."));
+			server.close();
+			timer0_detachInterrupt();
+			delay(2000);
+			ESP.restart();
+		}, []() {
+			String filename(F("import.tar"));
+			HTTPUpload& upload = server.upload();
+			if(upload.status == UPLOAD_FILE_START){
+				;
+			} else if(upload.status == UPLOAD_FILE_WRITE){
+				// upload file in progress
+				const uint8_t *p = upload.buf;
+				size_t size = upload.currentSize;
+				File dataFile = SPIFFS.open(filename.c_str(), "a");
+				if(dataFile.size() > MAX_SETTINGS_TAR_SIZE)
+				{
+					last_import_error = 1;
+					return; // max size exceeded
+				}
+				dataFile.write(p, size);
+			} else if(upload.status == UPLOAD_FILE_END){
+				if(!settings_import(filename))
+				{
+					last_import_error = 2;
+					return; // import error
+				}
+			}
+		});
 
 	server.begin();
 	Serial.println(F("HTTP server started"));

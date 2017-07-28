@@ -86,8 +86,6 @@ void setup(void){
 	Serial.printf("maxOpenFiles  : %d\r\n", info.maxOpenFiles);
 	Serial.printf("maxPathLength : %d\r\n", info.maxPathLength);
 
-	wifi_init_settings();
-
   ir_init();
   led_init();
   wifi_setup();

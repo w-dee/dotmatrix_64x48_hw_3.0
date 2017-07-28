@@ -7,7 +7,6 @@ void wifi_wps();
 
 
 void wifi_start();
-void wifi_init_settings();
 void wifi_write_settings();
 
 struct ip_addr_settings_t
