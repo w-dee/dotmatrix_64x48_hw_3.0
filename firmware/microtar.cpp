@@ -169,8 +169,8 @@ static int file_read(mtar_t *tar, void *data, unsigned size) {
 }
 
 static int file_seek(mtar_t *tar, unsigned offset) {
-  int res = tar->stream.seek(offset);
-  return (res == 0) ? MTAR_ESUCCESS : MTAR_ESEEKFAIL;
+  bool res = tar->stream.seek(offset);
+  return res ? MTAR_ESUCCESS : MTAR_ESEEKFAIL;
 }
 
 static int file_close(mtar_t *tar) {
