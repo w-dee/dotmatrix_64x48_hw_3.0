@@ -215,6 +215,7 @@ bool settings_export(const String & target_name,
 	const char wmode[2]  = { 'w',  0 };
 	const char rmode[2]  = { 'r',  0 };
 	const char rootstr[2] = { '/', 0 };
+	String tar_dir_prefix = F("mazo3_settings");
 	Dir dir;
 
 	// allocate mtar_t. use heap to reduce stack usage.
@@ -242,7 +243,8 @@ bool settings_export(const String & target_name,
 		if(!settings_check_crc(in)) { in.close(); continue; }
 
 		// write header
-		if(MTAR_ESUCCESS != mtar_write_file_header(p_tar, filename.c_str(), size))
+		if(MTAR_ESUCCESS != mtar_write_file_header(p_tar,
+			(tar_dir_prefix + filename).c_str(), size))
 			goto error_end; // write error
 
 		// write content
@@ -275,6 +277,8 @@ bool settings_import(const String & target_name)
 	const char wmode[2]  = { 'w',  0 };
 	const char rmode[2]  = { 'r',  0 };
 	const char nullstr[1] = { 0 };
+	int processed_files = 0;
+	int res;
 
 	// allocate mtar_t and its header. use heap to reduce stack usage.
 	mtar_t *p_tar;
@@ -285,17 +289,23 @@ bool settings_import(const String & target_name)
 	if(!p_tar || !p_h) goto error_end; // memory error
 
 	// open archive for reading
-	if(MTAR_ESUCCESS != mtar_open(p_tar, target_name.c_str(), rmode))
+	res = mtar_open(p_tar, target_name.c_str(), rmode);
+	if(MTAR_ESUCCESS != res)
+	{
+		Serial.printf_P(PSTR("mtar_open() failed. code=%d\r\n"), res);
 		goto error_end; // open error
+	}
 
 	// read input archive
 	while( (mtar_read_header(p_tar, p_h)) != MTAR_ENULLRECORD)
 	{
 		// extract basename of the filename
 		String fn = p_h->name;
+		Serial.printf_P(PSTR("Processing %s ...\r\n"), fn.c_str());
 		int last_slash = fn.lastIndexOf('/');
 		if(last_slash != -1)
 			fn = fn.c_str() + last_slash + 1; // extract basename
+		fn = String(F("/")) + fn; // make it on the root directory
 
 		// open file
 		File out = SETTINGS_SPIFFS.open(fn.c_str(), wmode);
@@ -304,33 +314,51 @@ bool settings_import(const String & target_name)
 		uint32_t crc = 0xffffffff;
 		if(CHECKSUM_SIZE !=
 			out.write(reinterpret_cast<const uint8_t *>(&crc),
-				CHECKSUM_SIZE)) return false; // file write error
+				CHECKSUM_SIZE)) goto file_write_error; // file write error
 		crc = INITIAL_CRC_VALUE;
 
 		// copy value
-		uint8_t ibuf[64];
+		uint8_t ibuf[128];
 		size_t size = p_h->size;
 		while(true)
 		{
 			size_t one_size = sizeof(ibuf) < size ? sizeof(ibuf) : size;
 			if(one_size == 0) break;
 			if(MTAR_ESUCCESS != mtar_read_data(p_tar, ibuf, one_size))
+			{
+				Serial.printf_P(PSTR("File read error.\r\n"));
 				goto error_end; // read error
+			}
 			crc = crc_update(crc, ibuf, one_size);
-			if(one_size != out.write(ibuf, one_size)) goto error_end;
+			if(one_size != out.write(ibuf, one_size)) goto file_write_error;
+			size -= one_size;
 		}
 
 		// write CRC back
 		out.seek(0);
 		if(CHECKSUM_SIZE !=
 			out.write(reinterpret_cast<const uint8_t *>(&crc),
-				CHECKSUM_SIZE)) goto error_end; // file write error
+				CHECKSUM_SIZE)) goto file_write_error; // file write error
 		out.close();
+
+		// To the next file
+		++ processed_files;
+		if(mtar_next(p_tar) != MTAR_ESUCCESS) break; 
 	}
 
 	if(p_tar) delete p_tar;
 	if(p_h) delete p_h;
+
+	if(processed_files == 0)
+	{
+		Serial.printf_P(PSTR("No setting items processed.\r\n"));
+		return false;
+	}
+
 	return true;
+
+file_write_error:
+	Serial.printf_P(PSTR("File write error.\r\n"));
 
 error_end:
 	if(p_tar) delete p_tar;

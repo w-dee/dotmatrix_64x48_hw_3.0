@@ -187,7 +187,6 @@ static bool send_common_header()
 		server.requestAuthentication();
 		return false;
 	}
-	server.sendHeader(F("Connection"), F("close"));
 	return true;
 }
 
@@ -207,6 +206,9 @@ static bool loadFromFS(String path){
 	else if(path.endsWith(".zip")) dataType = F("application/zip");
 
 	path = String(F("/w")) + path; // all contents must be under "w" directory
+
+	if(SPIFFS.exists(path + F(".gz")))
+      path += String(F(".gz")); // handle gz
 
 	File dataFile = SPIFFS.open(path.c_str(), "r");
 
@@ -253,6 +255,7 @@ void web_server_setup()
 	server.on(F("/update"), HTTP_POST, [](){
 			Serial.println(F("\r\nOTA done.\r\n"));
 			if(!send_common_header()) return;
+			server.sendHeader(F("Connection"), F("close"));
 			server.send(200, F("text/plain"),
 				(ota_status == ota_fail || Update.hasError())?("FAIL:"+LastOTAError).c_str():"OK");
 			server.close();
@@ -290,7 +293,12 @@ void web_server_setup()
 	server.on(F("/settings/import"), HTTP_POST, [](){
 			Serial.println(F("\r\Import done.\r\n"));
 			if(!send_common_header()) return;
-			server.send(200, F("text/plain"), last_import_error ? F("Import failed. System will now reboot.") : F("Import done. System will now reboot."));
+			server.send(200, F("text/plain"),
+				last_import_error == 1?
+					F("Import failed. Too large file.") :
+				last_import_error == 2?
+					F("Import failed. System will now reboot.") :
+					F("Import done. System will now reboot."));
 			server.close();
 			timer0_detachInterrupt();
 			delay(2000);
@@ -299,7 +307,8 @@ void web_server_setup()
 			String filename(F("import.tar"));
 			HTTPUpload& upload = server.upload();
 			if(upload.status == UPLOAD_FILE_START){
-				;
+				SPIFFS.remove(filename.c_str());
+				last_import_error = 0;
 			} else if(upload.status == UPLOAD_FILE_WRITE){
 				// upload file in progress
 				const uint8_t *p = upload.buf;
@@ -311,6 +320,7 @@ void web_server_setup()
 					return; // max size exceeded
 				}
 				dataFile.write(p, size);
+				dataFile.close();
 			} else if(upload.status == UPLOAD_FILE_END){
 				if(!settings_import(filename))
 				{
