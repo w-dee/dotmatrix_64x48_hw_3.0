@@ -11,15 +11,43 @@ extern "C" {
 // sub-hour timezone settings like UTC+12:45, daylight time ... etc.
 // I'll write another SNTP implementation soon.
 
+static string_vector ntp_servers;
+static string_vector shadow_ntp_servers;
+	// it seems that lwip's ntp server name is just a pointer, so keeping
+	// memory content is responsivility of the caller.
+
+/**
+ * set sntp server from ntp_servers
+ */
+static void calendar_set_ntp_servers_from_vector()
+{
+	shadow_ntp_servers = ntp_servers; // this will do whole deep copy
+	for(size_t i = 0; i < ntp_servers.size(); ++i)
+	{
+		// I wonder why lwip's sntp_setservername receives
+		// <char *>, not <const char *>.
+		sntp_setservername(i,
+			const_cast<char *>(shadow_ntp_servers[i].c_str()));
+	}
+}
+
 void calendar_init()
 {
 	sntp_init();
-	sntp_setservername(0, "ntp1.jst.mfeed.ad.jp");
-	sntp_setservername(1, "ntp2.jst.mfeed.ad.jp");
-	sntp_setservername(2, "ntp3.jst.mfeed.ad.jp");
+
+	settings_write_vector(F("cal_ntp_servers"), 
+		string_vector {
+			F("ntp1.jst.mfeed.ad.jp"),
+			F("ntp2.jst.mfeed.ad.jp"),
+			F("ntp3.jst.mfeed.ad.jp") },
+				SETTINGS_NO_OVERWRITE );
+
+	settings_read_vector(F("cal_ntp_servers"), ntp_servers);
+
+	calendar_set_ntp_servers_from_vector();
 }
 
-
+#if 0
 static void calendar_tick()
 {
 	const char * p = sntp_get_real_time(sntp_get_current_timestamp());
@@ -27,6 +55,7 @@ static void calendar_tick()
 }
 
 static pendulum_t pendulum(&calendar_tick, 1000);
+#endif
 
 void calendar_get_time(calendar_tm & tm)
 {
@@ -34,7 +63,6 @@ void calendar_get_time(calendar_tm & tm)
 //	sntp_localtime_r(&t, &tm);
 }
 
-static string_vector ntp_servers;
 
 string_vector calendar_get_ntp_server() { return ntp_servers; }
 
@@ -43,6 +71,7 @@ void calendar_set_ntp_server(const string_vector & servers)
 	if(servers.size() > MAX_NTP_SERVERS) return;
 
 	ntp_servers = servers;
+	calendar_set_ntp_servers_from_vector();
 }
 
 
