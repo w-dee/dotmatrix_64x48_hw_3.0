@@ -235,7 +235,7 @@ static void led_init_spi_and_ledclock()
 	// setup hardware SPI
 	SPI.begin();
 	SPI.setHwCs(false);
-	SPI.setFrequency((int)20000000);
+	SPI.setFrequency((int)13333333);
 	SPI1U = SPIUMOSI | SPIUSSE | SPIUFWDUAL;
 	SPI1C |= SPICFASTRD | SPICDOUT; // use DIO
 	SPI1C &= ~(SPICWBO | SPICRBO); // MSB first
@@ -485,10 +485,8 @@ static constexpr timer_interval_values_t timer_interval_values[LED_NUM_INTERVAL_
 		36864,
 		{
 			3000,
-			3000,
-			3864,
-			3000,
-			3000,
+			3400,
+			3464,
 			3000,
 			3000,
 			3000,
@@ -496,6 +494,8 @@ static constexpr timer_interval_values_t timer_interval_values[LED_NUM_INTERVAL_
 			3000,
 			3000,
 			3000,
+			3500,
+			2500,
 
 		}
 	},
@@ -545,8 +545,6 @@ static constexpr int phase_sum(const timer_interval_values_t values, int index) 
 static_assert(phase_sum(timer_interval_values[0], max_phase-1) == timer_interval_values[0].timer_interval, "timer_interval[0] sum mismatch");
 static_assert(phase_sum(timer_interval_values[1], max_phase-1) == timer_interval_values[1].timer_interval, "timer_interval[1] sum mismatch");
 static_assert(phase_sum(timer_interval_values[2], max_phase-1) == timer_interval_values[2].timer_interval, "timer_interval[2] sum mismatch");
-
-static uint32_t next_tick;
 
 static inline uint32_t ICACHE_RAM_ATTR led_tbl_gamma(uint8_t x) { return gamma_table[x]; }
 static inline uint32_t ICACHE_RAM_ATTR led_tbl_bw(uint8_t x)
@@ -826,77 +824,113 @@ static void ICACHE_RAM_ATTR led_set_brightness()
 	if(current_phase == max_phase) current_phase = 0;
 }
 
+
+/**
+ * next interrupt tick
+ */
+static uint32_t next_tick = 0;
+
+
 /**
  * interrupt counter
  */
-static uint32_t interrupt_count;
+static uint32_t interrupt_count = 0;
 
 /**
  * interrupt overrun counter
  */
-static uint32_t interrupt_overrun_count;
+static uint32_t interrupt_overrun_count = 0;
 
 /**
- * whether overrun has occured
+ * interrupt allowable delay
+ * ;should be below all timer_interval_values[].timer_interval
  */
-static bool interrupt_overrun;
+static constexpr uint32_t interrupt_arrowable_delay = 15000;
 
 /**
- * expected interrupt delay from the end of the handler to the next interrupt enable point
+ * expected interrupt delay from end of the interrupt to next interrupt 
  */
-static constexpr uint32_t interrupt_delay = 50;
+static constexpr uint32_t interrupt_delay = 200;
+
 
 /**
- * maximum interrupt overrun count allowed before resetting the tick
+ * last overruned phase
  */
-static constexpr uint32_t max_overrun_count = 5;
+static int last_overrun_phase = 0;
 
-static int last_overrun_phase;
 
-//static bool in_timer_handler = false;
 /**
  * Timer interrupt handler
  */
 static void ICACHE_RAM_ATTR timer_handler()
 {
-	int phase = current_phase;
+	static bool in_handler;
+	if(in_handler) return;
+	in_handler = true;
 
 	++interrupt_count;
+	uint32_t current_tick = ESP.getCycleCount();
 
-	uint32_t phase_duration =
-		timer_interval_values[current_interval_index].timer_duration_phase[phase];
+	/*
+		           nt        nt+iad
+		============*----------+
 
+		            ^ct just in time
+		                  ^ct arrowable
+		                       ^ct  arrowable
+		                           ^ct not arrowable
+	*/
+
+	if((SPI1CMD & SPIBUSY) ||
+		(int32_t)(next_tick + interrupt_arrowable_delay - current_tick) < 0)
+	{
+		// SPI transaction in progress or
+		// interrupt too late;
+		// round up to next cycle
+		++ interrupt_overrun_count;
+		last_overrun_phase = current_phase;
+		uint32_t tick_add = timer_interval_values[current_interval_index].timer_interval;
 #if F_CPU == 160000000
-	phase_duration *= 2;
+		tick_add *= 2;
 #endif
 
-	next_tick += phase_duration;
-	timer0_write(next_tick);
-
-	// set brightness for one row
-	led_set_brightness();
-
-	// interrupt delay overload check
-	if((int32_t)(next_tick - interrupt_delay - ESP.getCycleCount()) < 0)
-	{
-		// timer next tick will be in past ...
-		++ interrupt_overrun_count;
-		interrupt_overrun = true;
-		last_overrun_phase = phase;
-		uint32_t temp_next_tick = ESP.getCycleCount() +interrupt_delay; // adjust timing
-		timer0_write(temp_next_tick);
-		if(interrupt_overrun_count >= max_overrun_count)
-		{
-			// reset next_tick because the interrupt is too heavy, so 
-			// it seems no way to recover timer delay
-			next_tick = temp_next_tick;
-		}
+		next_tick += tick_add;
+		while((int32_t)(next_tick + interrupt_arrowable_delay - current_tick) < 0)
+			next_tick += tick_add;
+		timer0_write(next_tick);
 	}
 	else
 	{
-		// reset overrun count
-		interrupt_overrun_count = 0;
+		int phase = current_phase;
+		uint32_t phase_duration =
+			timer_interval_values[current_interval_index].timer_duration_phase[phase];
+
+#if F_CPU == 160000000
+		phase_duration *= 2;
+#endif
+		next_tick += phase_duration;
+
+		// call LED SPI function
+		led_set_brightness();
+
+		// check next tick;
+		current_tick = ESP.getCycleCount();
+		if((next_tick + interrupt_delay - current_tick) < 0)
+		{
+			// next interrupt point will be already in past
+			last_overrun_phase = current_phase;
+			uint32_t tick_add = timer_interval_values[current_interval_index].timer_interval;
+#if F_CPU == 160000000
+			tick_add *= 2;
+#endif
+			while((int32_t)(next_tick + interrupt_delay - current_tick) < 0)
+				next_tick += tick_add;
+		}
+		timer0_write(next_tick);
 	}
+
+
+	in_handler = false;
 }
 
 /**
@@ -904,10 +938,11 @@ static void ICACHE_RAM_ATTR timer_handler()
  */
 static void led_init_timer()
 {
-
+	next_tick = ESP.getCycleCount() + 65536*8;/* any values over one vsync interval */
 	timer0_isr_init();
+	timer0_write(next_tick);
 	timer0_attachInterrupt(timer_handler);
-	timer0_write(next_tick = ESP.getCycleCount() + 65536 /* any values over one vsync interval */);
+	timer0_write(next_tick);
 }
 
 
@@ -936,9 +971,7 @@ void led_init()
 	bool res = settings_write(F("led_interval_mode"), F("0"), SETTINGS_NO_OVERWRITE);
 	String strval;
 	res = settings_read(F("led_interval_mode"), strval);
-
 	led_set_interval_mode( (led_interval_mode_t) strval.toInt());
-
 }
 
 void led_write_settings()
@@ -1164,14 +1197,37 @@ if(current_row == 0)
 }
 */
 
+	// check timer0 call is near the future
+	uint32_t tick = ESP.getCycleCount();
+	if(int32_t(next_tick - tick) < 0 ||
+		 int32_t(next_tick - tick) >= 65536)
+	{
+		// here should be never called but
+		// at this point I don't know why this situation occurs...
+	 	next_tick = tick + timer_interval_values[current_interval_index].timer_interval;
+	 	timer0_write(next_tick);
+	 	Serial.printf_P(PSTR("====== Tick adjusted ====== next_tick:%u tick:%u diff:%d = "), next_tick, tick,
+	 		next_tick - tick);
+	 	if(int32_t(next_tick - tick) < 0)
+	 		Serial.printf_P(PSTR("next tick is in past.\r\n"));
+	 	else
+	 		Serial.printf_P(PSTR("next tick is in far future.\r\n"));
+	}
+
+/*
+	{
+		uint32_t tick = ESP.getCycleCount();
+		Serial.printf("%u %u %d  \r", next_tick, tick, next_tick - tick);
+	}
+*/
 {
 	static uint32_t next = millis() + 1000;
 	if(millis() >= next)
 	{
-		Serial.printf("interval:%d int_cnt:%d ovrn:%d last_ovrn_p:%d rssi=%d chan=%d mode=%d %04x\r\n", timer_interval_values[current_interval_index].timer_interval, interrupt_count, (int)interrupt_overrun, last_overrun_phase, WiFi.RSSI(), WiFi.channel(), current_interval_index, button_read);
+		Serial.printf("int_cnt:%d ovrn:%d last_ovrn_p:%d rssi=%d chan=%d mode=%d %04x\r\n",interrupt_count, (int)interrupt_overrun_count, last_overrun_phase, WiFi.RSSI(), WiFi.channel(), current_interval_index, button_read);
 
 		interrupt_count = 0;
-		interrupt_overrun = false;
+		interrupt_overrun_count = 0;
 		next =millis() + 1000;
 		int n = analogRead(0);
 		Serial.printf("ambient=%d phy_mode=%d\r\n", n, WiFi.getPhyMode());

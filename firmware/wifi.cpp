@@ -53,6 +53,7 @@ static void wifi_check_proc()
 		led_set_interval_mode_from_channel(now_chann);
 
 		Serial.printf_P(PSTR("WiFi channel changed: %d\r\n"), now_chann);
+
 	}
 }
 

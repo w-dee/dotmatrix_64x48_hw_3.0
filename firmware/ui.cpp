@@ -42,8 +42,10 @@ protected:
 	//! Repeatedly called 50ms intervally when the screen is active
 	virtual void on_idle_50() {;}
 
-	//! Draw content; this function is automatically called 20ms
-	//! intervally to refresh the content
+	//! Draw content; this function is automatically called 50ms
+	//! intervally to refresh the content. Do not call
+	//! blocking function (like network, filesystem, serial)
+	//! should not be written in this handler.
 	virtual bool draw() {;}
 
 	//! Call this when the screen content is written and need to be showed
@@ -76,19 +78,22 @@ class screen_manager_t
 	bool stack_changed;
 	int8_t tick_interval_50 = 0; //!< to count 10ms tick to process 50ms things
 	int8_t blink_intensity = 0; //!< cursor blink intensity value
-	static uint32_t constexpr process_interval = 10; //!< process interval in ms
-	static uint32_t constexpr process_delay_limit = 9; //!< allowable process delay limit in ms
-	uint32_t next_millis; //!< next expected processing mills
+	static uint32_t constexpr process_draw_interval = 50; //!< process interval in ms
+	static uint32_t constexpr process_idle_interval = 10; //!< process interval in ms
+	static uint32_t constexpr process_draw_delay_limit = 9; //!< allowable process delay limit in ms
+	uint32_t next_draw_millis; //!< next expected processing mills
+	uint32_t next_idle_millis; //!< next idle processing mills
 	bool processing = false; //!< whether processing is ongoing or not
 
 public:
 	screen_manager_t() :
-		pendulum(std::bind(&screen_manager_t::process, this), process_interval) // 10ms interval
+		pendulum(std::bind(&screen_manager_t::process_draw, this), process_draw_interval) // 10ms interval
 	{
 		transition = t_none;
 		in_transition = false;
 		stack_changed = false;
-		next_millis = millis() + process_interval;
+		next_draw_millis = millis() + process_draw_interval;
+		next_idle_millis = millis() + process_idle_interval;
 	}
 
 	void show(transition_t tran)
@@ -129,27 +134,29 @@ public:
 	}
 
 protected:
-	void process()
+	void process_draw()
 	{
 		if(processing) return; // prevent reentrance
 		processing = true;
+
 		uint32_t now = millis();
-		if((int32_t)((next_millis + process_delay_limit) - now) >= 0)
+		if((int32_t)((next_draw_millis + process_draw_delay_limit) - now) >= 0)
 		{
 			// process called on time
-			_process();
-			next_millis += process_interval;
+
+			_process_draw();
+			next_draw_millis += process_draw_interval;
 		}
 		else
 		{
 			// process too slow
-			next_millis = now + process_interval;
+			next_draw_millis = now + process_draw_interval;
 		}
 		processing = false;
 	}
 
 
-	void _process()
+	void _process_draw()
 	{
 		size_t sz = stack.size();
 		if(sz)
@@ -159,40 +166,71 @@ protected:
 				stack_changed = false;
 				screen_base_t *top = stack[sz -1];
 
-				// dispatch button event
-				uint32_t buttons = button_get();
-				for(uint32_t i = 1; i; i <<= 1)
-					if(buttons & i) top->on_button(i);
-
-				// care must be taken,
-				// the screen may be poped (removed) during button event
-				if(!stack_changed && tick_interval_50 == 0)
-				{
-					// dispatch draw event
-					// erase background
-					get_bg_frame_buffer().fill(0, 0, LED_MAX_LOGICAL_COL, LED_MAX_LOGICAL_ROW, 0);
-					if(top->draw()) show(t_none);
-				}
-
-				// care must be taken again
-				if(!stack_changed)
-				{
-					// dispatch idle event
-					top->on_idle_10();
-				}
-
-				// care must be taken again
-				if(!stack_changed && tick_interval_50 == 0)
-				{
-					// dispatch idle event
-					top->on_idle_50();
-				}
+				// dispatch draw event
+				// erase background
+				get_bg_frame_buffer().fill(0, 0, LED_MAX_LOGICAL_COL, LED_MAX_LOGICAL_ROW, 0);
+				if(top->draw()) show(t_none);
 			}
 		}
-		++tick_interval_50;
-		if(tick_interval_50 == 5) { tick_interval_50 = 0; blink_intensity += 21; }
+		blink_intensity += 21;
 	}
 
+	void process_idle()
+	{
+		if(processing) return; // prevent reentrance
+		processing = true;
+
+		uint32_t now = millis();
+		if((int32_t)(now - next_idle_millis) >= 0)
+		{
+			_process_idle();
+			next_idle_millis = now + process_idle_interval;
+			if((int32_t)(next_idle_millis - millis()) <= 0)
+			{
+				// next tick is already in past
+				next_idle_millis = millis() + process_idle_interval;
+			}
+		}
+
+		processing = false;
+	}
+
+
+	void _process_idle()
+	{
+		size_t sz = stack.size();
+		if(sz)
+		{
+			stack_changed = false;
+			screen_base_t *top = stack[sz -1];
+
+			// dispatch button event
+			uint32_t buttons = button_get();
+			for(uint32_t i = 1; i; i <<= 1)
+				if(buttons & i) top->on_button(i);
+
+			// care must be taken again,
+			// the screen may be removed during button event
+			if(!stack_changed)
+			{
+				// dispatch idle event
+				top->on_idle_10();
+			}
+
+			// care must be taken,
+			// the screen may be poped (removed) during previous event
+			if(!stack_changed && tick_interval_50 == 0)
+			{
+				// dispatch idle event
+				top->on_idle_50();
+			}
+			++tick_interval_50;
+			if(tick_interval_50 == 5) { tick_interval_50 = 0;  }
+
+		}
+	}
+
+	friend void ui_process();
 
 public:
 	/**
@@ -673,7 +711,7 @@ protected:
 		}
 
 		// show the drawn content
-		show();
+		return true;
 	}
 
 	void on_button(uint32_t button) override
@@ -1072,7 +1110,7 @@ class screen_wps_processing_t : public screen_base_t
 {
 	String line[2];
 	bool done = false;
-	bool first = true;
+	bool first = false;
 
 public:
 	screen_wps_processing_t() : line { F("Waiting"), F("WPS") }
@@ -1085,26 +1123,26 @@ public:
 		// draw the text
 		fb().draw_text(0, 12, get_blink_intensity(), line[0].c_str(), font_5x5);
 		fb().draw_text(0, 18, get_blink_intensity(), line[1].c_str(), font_5x5);
+		first = true; // indicate first screen is drawn
+		return true;
+	}
 
-		// show the drawn content
-		show();
+protected:
 
-		// if first draw, begin WPS config
+
+	void on_idle_50() override
+	{
 		if(first)
 		{
 			first = false;
 			wifi_wps(); // this function will not return until wps done
 			done = true;
 		}
-
-		return true;
-	}
-
-protected:
-	void on_idle_50() override
-	{
-		// TODO: show WPS configuration result
-		if(done) screen_manager.pop();
+		else
+		{
+			// TODO: show WPS configuration result
+			if(done) screen_manager.pop();
+		}
 	}
 
 };
@@ -1275,7 +1313,16 @@ class screen_clock_t : public screen_base_t
 {
 	bool draw() override
 	{
-		// erase
+		// hours and minutes
+		fb().draw_text( 0+2, 0, 255, "4", font_large_digits);
+		fb().draw_text(13+2, 0, 255, "4", font_large_digits);
+		fb().draw_text(30+2, 0, 255, "4", font_large_digits);
+		fb().draw_text(43+2, 0, 255, "4", font_large_digits);
+		fb().fill(27+2,  5, 2, 2, 255);
+		fb().fill(27+2, 12, 2, 2, 255);
+		fb().draw_text(0, 19, 255, "3", font_week_names);
+		fb().draw_text(24, 19, 255, "12/31", font_bold_digits);
+		fb().draw_text(0, 28, 255, "33C1023h64%", font_5x5);
 		return true;
 	}
 };
@@ -1287,10 +1334,10 @@ void ui_setup()
 //	screen_manager.push(new screen_ascii_editor_t("0123456789qwe"));
 //	screen_manager.push(new screen_ip_editor_t("IP addr", "012.88.77.65"));
 //	screen_manager.push(new screen_menu_t(F("Test menu"), {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"} ));
-	screen_manager.push(new screen_wifi_setting_t());
+	screen_manager.push(new screen_clock_t());
 }
 
 void ui_process()
 {
-
+	screen_manager.process_idle();
 }

@@ -13,7 +13,7 @@ protected:
 	struct _ETSTIMER_ timer;
 	callback_t callback;
 
-public:
+public: // check pendulum handler does not call blocking functions
 	pendulum_t(callback_t _callback, uint32_t interval_ms);
 	~pendulum_t();
 
