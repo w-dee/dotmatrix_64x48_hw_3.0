@@ -16,7 +16,6 @@ const glyph_t * font_aa_t::get_glyph(int32_t chr) const
 	do
 	{
 		uint32_t m = (s+e)/2;
-Serial.printf("%d %d %d %d %d\r\n", s, e, m, count, chr);
 		switch(e - s)
 		{
 		case 0:
@@ -34,7 +33,6 @@ Serial.printf("%d %d %d %d %d\r\n", s, e, m, count, chr);
 			// do binary search
 			g = glyph_header.array + m;
 			int cp = pgm_read_dword(&g->code_point);
-Serial.printf("m's cp : %d\r\n", cp);
 			if(cp == chr)
 				return g; // found
 			if(cp < chr)
