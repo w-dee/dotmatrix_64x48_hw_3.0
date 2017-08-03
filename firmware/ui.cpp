@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <vector>
 #include <algorithm>
+#include <functional>
+
 #include "ui.h"
 #include "ir_control.h"
 #include "buttons.h"
@@ -9,10 +11,11 @@
 #include "wifi.h"
 #include "pendulum.h"
 #include "settings.h"
+#include "calendar.h"
 
-#include <functional>
 
 #include "fonts/font_5x5.h"
+#include "fonts/font_4x5.h"
 #include "fonts/font_bff.h"
 #include "fonts/font_aa.h"
 
@@ -1313,16 +1316,42 @@ class screen_clock_t : public screen_base_t
 {
 	bool draw() override
 	{
+		calendar_tm tm;
+		calendar_get_time(tm);
+
 		// hours and minutes
-		fb().draw_text( 0+2, 0, 255, "4", font_large_digits);
-		fb().draw_text(13+2, 0, 255, "4", font_large_digits);
-		fb().draw_text(30+2, 0, 255, "4", font_large_digits);
-		fb().draw_text(43+2, 0, 255, "4", font_large_digits);
-		fb().fill(27+2,  5, 2, 2, 255);
-		fb().fill(27+2, 12, 2, 2, 255);
-		fb().draw_text(0, 19, 255, "3", font_week_names);
-		fb().draw_text(24, 19, 255, "12/31", font_bold_digits);
-		fb().draw_text(0, 28, 255, "33C1023h64%", font_5x5);
+		char buf[10];
+		buf[0] = tm.tm_hour / 10 + '0';
+		buf[1] = 0;
+		fb().draw_text( 0, 0, 255, buf, font_large_digits);
+
+		buf[0] = tm.tm_hour % 10 + '0';
+		buf[1] = 0;
+		fb().draw_text(13, 0, 255, buf, font_large_digits);
+
+		buf[0] = tm.tm_min / 10 + '0';
+		buf[1] = 0;
+		fb().draw_text(28, 0, 255, buf, font_large_digits);
+
+		buf[0] = tm.tm_min % 10 + '0';
+		buf[1] = 0;
+		fb().draw_text(41, 0, 255, buf, font_large_digits);
+
+		buf[0] = 0xE2; buf[1] = 0x82; buf[2] = 0x8f;
+		buf[3] = 0xE2; buf[4] = 0x82; buf[5] = tm.tm_sec / 10 + 0x80;
+		buf[6] = 0xE2; buf[7] = 0x82; buf[8] = tm.tm_sec % 10 + 0x80;
+		buf[9] = 0;
+		fb().draw_text(55, 13, 255, buf, font_5x5);
+		fb().fill(27,  5, 1, 2, 255);
+		fb().fill(27, 12, 1, 2, 255);
+
+		buf[0] = tm.tm_wday + '0';
+		buf[1] = 0;
+		fb().draw_text(0, 19, 255, buf, font_week_names);
+
+		sprintf_P(buf, PSTR("%2d/%2d"), tm.tm_mon + 1, tm.tm_mday);
+		fb().draw_text(26, 19, 255, buf, font_bold_digits);
+		fb().draw_text(0, 28, 255, "30.1℃ 1024h 74%", font_4x5);
 		return true;
 	}
 };

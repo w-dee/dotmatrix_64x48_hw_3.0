@@ -8,7 +8,6 @@
 #include "matrix_drive.h"
 #include "buttons.h"
 #include "ir_control.h"
-#include "bme280.h"
 #include "fonts/font_bff.h"
 #include "ui.h"
 #include "settings.h"
@@ -16,6 +15,7 @@
 #include "wifi.h"
 #include "calendar.h"
 #include "panic.h"
+#include "sensors.h"
 
 #include "spiffs_api.h"
 extern "C" uint32_t _SPIFFS_start;
@@ -51,14 +51,11 @@ FS SETTINGS_SPIFFS = FS(FSImplPtr(new SPIFFSImpl(
 
 extern "C" {  size_t xPortGetFreeHeapSize(); }
 
-#define WIRE_SDA 0
-#define WIRE_SCL 5
-
-BME280 bme280;
-
-
 
 extern uint32_t _SPIFFS_start;
+
+#define WIRE_SDA 0
+#define WIRE_SCL 5
 
 void setup(void){
 
@@ -111,12 +108,10 @@ void setup(void){
 	Serial.printf_P(PSTR("Calendar initialization...\r\n"));
   calendar_init();
 
- 	Serial.printf_P(PSTR("BME280 initialization...\r\n"));
- Wire.begin(WIRE_SDA, WIRE_SCL);
+ 	Serial.printf_P(PSTR("Sensors initialization...\r\n"));
+	Wire.begin(WIRE_SDA, WIRE_SCL);
+	sensors_init();
 
-
-  bme280.begin();
-  bme280.setMode(BME280_MODE_NORMAL, BME280_TSB_1000MS, BME280_OSRS_x1, BME280_OSRS_x1, BME280_OSRS_x1, BME280_FILTER_OFF);
 
 
  	Serial.printf_P(PSTR("MDNS initialization...\r\n"));
@@ -160,7 +155,7 @@ void loop()
 	wifi_check();
 	test_led_sel_row();
 	button_update();
-
+	sensors_check();
 	ui_process();
 	web_server_handle_client();
 

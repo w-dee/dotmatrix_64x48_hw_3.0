@@ -5,18 +5,21 @@
 
 /* I don't know why this struct is not exported from sntp.c ... 
    This must be the same struct as sntp.c's one. */
-struct calendar_tm
-{
-  int	tm_sec;
-  int	tm_min;
-  int	tm_hour;
-  int	tm_mday;
-  int	tm_mon;
-  int	tm_year;
-  int	tm_wday;
-  int	tm_yday;
-  int	tm_isdst;
-};
+extern "C" {
+	typedef struct tag_calendar_tm
+	{
+	  int	tm_sec;
+	  int	tm_min;
+	  int	tm_hour;
+	  int	tm_mday;
+	  int	tm_mon;
+	  int	tm_year;
+	  int	tm_wday;
+	  int	tm_yday;
+	  int	tm_isdst;
+	}  calendar_tm;
+}
+
 
 void calendar_init();
 void calendar_get_time(calendar_tm & tm);

@@ -52,20 +52,22 @@ class BME280 {
   public:
     BME280();
     void begin();
-    void setMode(
+    bool setMode(
       uint8_t mode, // sensor mode
       uint8_t t_sb, // inactive duration
       uint8_t osrs_h, // oversampling of humidity data
       uint8_t osrs_t, // oversampling of temperature data
       uint8_t osrs_p, // oversampling of pressure data
       uint8_t filter // time constant of the IIR filter
-    );
-    void getData(double *temperature, double *humidity, double *pressure);
+    ); //!< returns whether settings BME280 is success or not (mostly fails if BME280 is not connected)
+    bool getData(double *temperature, double *humidity, double *pressure);
     void getStatus(uint8_t *measuring, uint8_t *im_update);
     uint8_t isMeasuring();
     uint8_t isUpdating();
     uint8_t readId();
+    bool available() const { return is_available; }
   private:
+  	bool is_available;
     /* Trimming parameters dig_ */
     uint16_t dig_T1;
     int16_t dig_T2, dig_T3;
@@ -76,7 +78,7 @@ class BME280 {
     int8_t dig_H6;
     int32_t t_fine;
  
-    void readTrimmingParameter();
+    bool readTrimmingParameter();
     uint8_t writeRegister(uint8_t address, uint8_t data);
     uint8_t readRegister(uint8_t address, uint8_t data[], uint8_t numberOfData);
  

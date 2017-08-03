@@ -6,38 +6,41 @@
  /*
  * BME280 access class from 
  * http://garretlab.web.fc2.com/arduino/lab/temperature_humidity_and_pressure_sensor/index.html
+ * Modified by W.Dee to check BME280 available
  */
 
 // TODO .... where is the original implementation copyright !?
 
 BME280::BME280() {
- 
+ is_available = false;
 }
  
 void BME280::begin() {
 //  Wire.begin();
 }
  
-void BME280::setMode(uint8_t mode, uint8_t t_sb, uint8_t osrs_h, uint8_t osrs_t, uint8_t osrs_p, uint8_t filter) {
+bool BME280::setMode(uint8_t mode, uint8_t t_sb, uint8_t osrs_h, uint8_t osrs_t, uint8_t osrs_p, uint8_t filter) {
   uint8_t config, ctrl_meas, ctrl_hum;
  
   config = (t_sb << 5) | (osrs_p << 2); // spi3w_en = 0;
   ctrl_meas = (osrs_t << 5) | (osrs_p << 2) | mode;
   ctrl_hum = osrs_h;
  
-  writeRegister(BME280_CTRL_HUM, ctrl_hum);
-  writeRegister(BME280_CTRL_MEAS, ctrl_meas);
-  writeRegister(BME280_CONFIG, config);
+  if(0 != writeRegister(BME280_CTRL_HUM, ctrl_hum)) { is_available = false; return false; }
+  if(0 != writeRegister(BME280_CTRL_MEAS, ctrl_meas)) { is_available = false; return false; }
+  if(0 != writeRegister(BME280_CONFIG, config)) { is_available = false; return false; }
  
-  readTrimmingParameter();
+  if(!readTrimmingParameter()) { is_available = false; return false; }
+  is_available = true;
+  return true;
 }
  
-void BME280::getData(double *temperature, double *humidity, double *pressure) {
+bool BME280::getData(double *temperature, double *humidity, double *pressure) {
   uint8_t data[8];
   uint32_t adc_T, adc_H, adc_P;
  
-  readRegister(BME280_PRESS_MSB, data, 8);
- 
+  if(0 == readRegister(BME280_PRESS_MSB, data, 8)) return false;
+  
   adc_P = (data[0] << 12) | (data[1] << 4) | (data[2] >> 4);
   adc_T = (data[3] << 12) | (data[4] << 4) | (data[5] >> 4);
   adc_H = (data[6] << 8) | data[7];
@@ -45,6 +48,8 @@ void BME280::getData(double *temperature, double *humidity, double *pressure) {
   *temperature = compensate_T(adc_T) / 100.0;
   *pressure = compensate_P(adc_P) / 256.0 / 100.0;
   *humidity = compensate_H(adc_H) / 1024.0;
+
+  return true;
 }
  
 void BME280::getStatus(uint8_t *measuring, uint8_t *im_update) {
@@ -76,33 +81,39 @@ uint8_t BME280::readId() {
   return data;
 }
  
-void BME280::readTrimmingParameter() {
+bool BME280::readTrimmingParameter() {
   uint8_t data[32];
+  bool success = true;
  
-  readRegister(BME280_CALIB00, &(data[0]), 24); /* 0x88-0x9f */
-  readRegister(BME280_CALIB25, &(data[24]), 1); /* 0xa1 */
-  readRegister(BME280_CALIB26, &(data[25]), 7); /* 0xe1-0xe7 */
- 
-  dig_T1 = data[0] | (data[1] << 8);
-  dig_T2 = data[2] | (data[3] << 8);
-  dig_T3 = data[4] | (data[5] << 8);
- 
-  dig_P1 = data[6] | (data[7] << 8);
-  dig_P2 = data[8] | (data[9] << 8);
-  dig_P3 = data[10] | (data[11] << 8);
-  dig_P4 = data[12] | (data[13] << 8);
-  dig_P5 = data[14] | (data[15] << 8);
-  dig_P6 = data[16] | (data[17] << 8);
-  dig_P7 = data[18] | (data[19] << 8);
-  dig_P8 = data[20] | (data[21] << 8);
-  dig_P9 = data[22] | (data[23] << 8);
- 
-  dig_H1 = data[24];
-  dig_H2 = data[25] | (data[26] << 8);
-  dig_H3 = data[27];
-  dig_H4 = (data[28] << 4) | (data[29] & 0x0f);
-  dig_H5 = ((data[29] >> 4) & 0x0f) | (data[30] << 4);
-  dig_H6 = data[31];
+  success = success && (0 != readRegister(BME280_CALIB00, &(data[0]), 24)); /* 0x88-0x9f */
+  success = success && (0 != readRegister(BME280_CALIB25, &(data[24]), 1)); /* 0xa1 */
+  success = success && (0 != readRegister(BME280_CALIB26, &(data[25]), 7)); /* 0xe1-0xe7 */
+
+  if(success)
+  { 
+	  dig_T1 = data[0] | (data[1] << 8);
+	  dig_T2 = data[2] | (data[3] << 8);
+	  dig_T3 = data[4] | (data[5] << 8);
+	 
+	  dig_P1 = data[6] | (data[7] << 8);
+	  dig_P2 = data[8] | (data[9] << 8);
+	  dig_P3 = data[10] | (data[11] << 8);
+	  dig_P4 = data[12] | (data[13] << 8);
+	  dig_P5 = data[14] | (data[15] << 8);
+	  dig_P6 = data[16] | (data[17] << 8);
+	  dig_P7 = data[18] | (data[19] << 8);
+	  dig_P8 = data[20] | (data[21] << 8);
+	  dig_P9 = data[22] | (data[23] << 8);
+	 
+	  dig_H1 = data[24];
+	  dig_H2 = data[25] | (data[26] << 8);
+	  dig_H3 = data[27];
+	  dig_H4 = (data[28] << 4) | (data[29] & 0x0f);
+	  dig_H5 = ((data[29] >> 4) & 0x0f) | (data[30] << 4);
+	  dig_H6 = data[31];
+  }
+
+  return success;
 }
  
 // Returns temperature in DegC, resolution is 0.01 DegC. Output value of “5123” equals 51.23 DegC.
@@ -166,11 +177,14 @@ uint8_t BME280::readRegister(uint8_t address, uint8_t data[], uint8_t numberOfDa
  
   Wire.beginTransmission(BME280_ADDRESS);
   Wire.write(address);
-  Wire.endTransmission();
+  if(0 != Wire.endTransmission()) return 0;
  
   Wire.requestFrom((uint8_t)BME280_ADDRESS, numberOfData);
+  uint32_t start = millis();
   while (Wire.available() < numberOfData) {
-    ;
+    if((int32_t)(millis() - start) >= 5)
+    	return 0; // timeout
+    optimistic_yield(1);
   }
  
   for (numberOfDataRead = 0; numberOfDataRead < numberOfData; numberOfDataRead++) {

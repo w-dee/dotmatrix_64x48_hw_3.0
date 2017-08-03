@@ -4,6 +4,10 @@
 
 extern "C" {
 #include "sntp.h"
+
+struct tag_calendar_tm * ICACHE_FLASH_ATTR
+sntp_localtime_r(const time_t * tim_p ,
+		struct tag_calendar_tm *res);
 }
 
 // TODO: The default SNTP implementation lacks sub-second
@@ -17,7 +21,7 @@ static string_vector shadow_ntp_servers;
 	// memory content is responsivility of the caller.
 
 /**
- * set sntp server from ntp_servers
+ * set sntp server and tz from ntp_servers
  */
 static void calendar_set_ntp_servers_from_vector()
 {
@@ -29,6 +33,8 @@ static void calendar_set_ntp_servers_from_vector()
 		sntp_setservername(i,
 			const_cast<char *>(shadow_ntp_servers[i].c_str()));
 	}
+
+	
 }
 
 void calendar_init()
@@ -41,10 +47,14 @@ void calendar_init()
 			F("ntp2.jst.mfeed.ad.jp"),
 			F("ntp3.jst.mfeed.ad.jp") },
 				SETTINGS_NO_OVERWRITE );
-
 	settings_read_vector(F("cal_ntp_servers"), ntp_servers);
-
 	calendar_set_ntp_servers_from_vector();
+
+	settings_write(F("cal_time_zone"), F("9"), SETTINGS_NO_OVERWRITE);
+
+	String s;
+	settings_read(F("cal_time_zone"), s);
+	sntp_set_timezone(s.toInt());
 }
 
 #if 0
@@ -60,7 +70,7 @@ static pendulum_t pendulum(&calendar_tick, 1000);
 void calendar_get_time(calendar_tm & tm)
 {
 	time_t t = sntp_get_current_timestamp();
-//	sntp_localtime_r(&t, &tm);
+	sntp_localtime_r(&t, &tm);
 }
 
 
