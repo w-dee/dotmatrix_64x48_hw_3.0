@@ -4,5 +4,6 @@
 void ui_setup();
 void ui_process();
 
-
+String ui_get_marquee();
+void ui_set_marquee(const String &s);
 #endif

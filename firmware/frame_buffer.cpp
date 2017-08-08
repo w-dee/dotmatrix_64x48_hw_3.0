@@ -168,6 +168,30 @@ void frame_buffer_t::draw_text(int x, int y, int level, const char *s, const fon
 
 }
 
+int frame_buffer_t::get_text_width(const char *s, const font_base_t & font)
+{
+	const uint8_t *p = reinterpret_cast<const uint8_t *>(s);
+	int ret = 0;
+
+	uint32_t c = 0;
+	while(true)
+	{
+		if(!*p) return ret;
+
+		if(utf8tow(p, &c))
+		{
+			font_base_t::metrics_t met = font.get_metrics(c);
+			if(met.exist)
+				ret += met.w;
+		}
+		else
+			return 0;
+	}
+
+	return ret;
+}
+
+
 void frame_buffer_t::fill(int level)
 {
 	for(int yy = 0; yy < LED_MAX_LOGICAL_ROW; ++yy)

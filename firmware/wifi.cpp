@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include "matrix_drive.h"
-#include SSID_H
+//#include SSID_H
 #include "pendulum.h"
 #include "settings.h"
 #include "wifi.h"
@@ -30,9 +30,7 @@ void wifi_setup()
 	// try to connect
 	WiFi.mode(WIFI_STA);
 	WiFi.setSleepMode(WIFI_NONE_SLEEP);
-	ap_name = ssid;
-	ap_pass = password;
-	WiFi.begin(ssid, password);
+	wifi_start();
 }
 
 extern "C" {
@@ -51,34 +49,30 @@ static void wifi_check_proc()
 		last_chann = now_chann;
 
 		led_set_interval_mode_from_channel(now_chann);
-
-		Serial.printf_P(PSTR("WiFi channel changed: %d\r\n"), now_chann);
-
 	}
 }
 
 
-
+static int wifi_last_status = -1;
 void wifi_check()
 {
 	// check wifi status
 	wifi_check_proc();
 
-
-
+	// output to console
+	int st = WiFi.status();
+	if(wifi_last_status != st)
 	{
-		static uint32_t next = millis() + 1000;
-		if(millis() >= next)
-		{
-
-			Serial.printf("status:%d ip:%s\r\n", (int)WiFi.status(), String(WiFi.localIP()).c_str());
-			Serial.printf("ssid:%s psk:%s\r\n", WiFi.SSID().c_str(), WiFi.psk().c_str());
-			next = millis() + 1000;
-		}
+		wifi_last_status = st;
+		Serial.print('\r');
+		Serial.print('\n');
+		String m = wifi_get_connection_info_string();
+		Serial.print(m.c_str());
+		Serial.print('\r');
+		Serial.print('\n');
 	}
-
-
 }
+
 ip_addr_settings_t::ip_addr_settings_t()
 {
 	clear();
@@ -121,6 +115,10 @@ void wifi_wps()
  */
 void wifi_start()
 {
+	WiFi.mode(WIFI_OFF);
+	WiFi.setPhyMode(WIFI_PHY_MODE_11N);
+	WiFi.setAutoReconnect(true);
+	WiFi.mode(WIFI_STA);
 	WiFi.begin(ap_name.c_str(), ap_pass.c_str());
 
 	IPAddress i_ip_addr;    i_ip_addr   .fromString(ip_addr_settings.ip_addr);
@@ -178,9 +176,24 @@ const String & wifi_get_ap_pass()
 	return ap_pass;
 }
 
-const ip_addr_settings_t & wifi_get_ip_addr_settings()
+ip_addr_settings_t wifi_get_ip_addr_settings(bool use_current_config)
 {
-	return ip_addr_settings;
+	// if use_current_config is true, returns current connection information
+	// instead of manually configured settings
+	if(!use_current_config)
+		return ip_addr_settings;
+
+	if(WiFi.status() != WL_CONNECTED)
+		return ip_addr_settings;
+
+	ip_addr_settings_t s;
+
+	s.ip_addr = WiFi.localIP().toString();
+	s.ip_gateway = WiFi.gatewayIP().toString();
+	s.ip_mask = WiFi.subnetMask().toString();
+	s.dns1 = WiFi.dnsIP(0).toString();
+	s.dns2 = WiFi.dnsIP(1).toString();
+	return s;
 }
 
 void wifi_set_ap_info(const String &_ap_name, const String &_ap_pass)
@@ -210,5 +223,35 @@ void wifi_manual_ip_info(const ip_addr_settings_t & ip)
 	wifi_start();
 }
 
+String wifi_get_connection_info_string()
+{
+	String m;
+	switch(WiFi.status())
+	{
+	case WL_CONNECTED:
+		m = String(F("Connected to \"")) + wifi_get_ap_name() + F("\"");
+		if((uint32_t)WiFi.localIP() == 0)
+			m += String(F(", but no IP address got."));
+		else
+			m += String(F(", IP address is ")) + WiFi.localIP().toString() + F(" .");
+		break;
 
+	case WL_NO_SSID_AVAIL:
+		m = String(F("AP \"")) + wifi_get_ap_name() + F("\" not available.");
+		break;
+
+	case WL_CONNECT_FAILED:
+		m = String(F("Connection to \"")) + wifi_get_ap_name() + F("\" failed.");
+		break;
+
+	case WL_IDLE_STATUS: // ?? WTF ??
+		m = String(F("Connection to \"")) + wifi_get_ap_name() + F("\" is idling.");
+		break;
+
+	case WL_DISCONNECTED:
+		m = String(F("Disconnected from \"")) + wifi_get_ap_name() + F("\".");
+		break;
+	}
+	return m;
+}
 

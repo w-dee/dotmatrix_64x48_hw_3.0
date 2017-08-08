@@ -68,23 +68,22 @@ static void led_print_0_1(int v)
 }
 
 /**
- * Set initial LED1642 configuration for POST
+ * set LED1642 register using bitbanging
  */
-static void led_post_set_led1642_config()
+static void led_post_set_led1642_reg(int reg, uint16_t val)
 {
-	constexpr uint16_t led_config = (1<<13); // enable SDO delay
 	for(int i = 0; i < LED_MAX_COL / 16; ++i)
 	{
 		for(int bit = 15; bit >= 0; --bit)
 		{
 			// set bit
-			dW(LED_COL_SER_GPIO, !!(led_config & (1<<bit)));
+			dW(LED_COL_SER_GPIO, !!(val & (1<<bit)));
 
 			// latch on
 			if(i == (LED_MAX_COL / 16 - 1) &&
-				bit == 7-1)
+				bit == reg-1)
 			{
-				// latch (clock count while latch is active = 7, set CR function)
+				// latch (clock count while latch is active; if reg = 7, set CR function)
 				dW(LED_COL_LATCH_GPIO, 1);
 			}
 			// clock
@@ -106,7 +105,13 @@ static void led_post()
 
 	// set SDO delay; see also led_init_led1642() description
 	for(int i = 0; i < (LED_MAX_COL / 16) * 2; ++i)
-		led_post_set_led1642_config();
+	{
+		constexpr uint16_t led_config = (1<<13); // enable SDO delay
+		led_post_set_led1642_reg(7, led_config); // set sdo delay
+	}
+
+	// blank all LED1642
+	led_post_set_led1642_reg(1, 0); // all blank
 
 	// prepare for sending bits
 	constexpr int num_bits = LED_MAX_COL + LED_MAX_ROW;
@@ -169,6 +174,10 @@ static void led_post()
 static int led_pwm_current_div = 0;
 static uint32_t led_pwm_current_pattern = 0;
 static bool led_pwm_clock_running; //!< whether the LED PWM clock is running or not
+
+static bool led_i2s_enable = true; //!< whether to enable I2S; this also disables serial0's RX
+
+void led_disable_i2s_output() { led_i2s_enable = false; } //!< disables I2S output; only valid if called before led_init()
 
 #define SLOW_CLOCK_DIV 0x3f
 #define SLOW_BCK_DIV 5
@@ -242,7 +251,8 @@ static void led_init_spi_and_ledclock()
 
 	// setup I2S data output from GPIO3
 //	pinMode(15, FUNCTION_1); //I2SO_BCK (SCLK) // unused
-	pinMode(3, FUNCTION_1); //I2SO_DATA (SDIN) // used for spread-spectrum clock output
+	if(led_i2s_enable)
+		pinMode(3, FUNCTION_1); //I2SO_DATA (SDIN) // used for spread-spectrum clock output
 
 	I2S_CLK_ENABLE();
 	I2SIC = 0x3F;
@@ -950,9 +960,9 @@ static uint8_t wifi_current_ch = 0;
 static led_interval_mode_t current_interval_mode = LIM_AUTO;
 
 /**
- * Initialize LED matrix driver
+ * Pre-initialization of LED
  */
-void led_init()
+void led_pre_init()
 {
 	for(int i = 0; i < 48; i++)
 		for(int j = 0; j < 64; j++)
@@ -960,18 +970,28 @@ void led_init()
 
 	led_init_gpio();
 	led_post();
+}
+
+/**
+ * Initialize LED matrix driver
+ */
+void led_init()
+{
 	led_init_spi_and_ledclock();
 	led_init_led1642();
 	led_init_timer();
 	led_start_pwm_clock();
-
-	delay(3000);
 
 	// restore led interval mode
 	bool res = settings_write(F("led_interval_mode"), F("0"), SETTINGS_NO_OVERWRITE);
 	String strval;
 	res = settings_read(F("led_interval_mode"), strval);
 	led_set_interval_mode( (led_interval_mode_t) strval.toInt());
+
+	// wait for a while to let the row driver scanning button
+	delay(500);
+
+
 }
 
 void led_write_settings()
@@ -1220,21 +1240,21 @@ if(current_row == 0)
 		Serial.printf("%u %u %d  \r", next_tick, tick, next_tick - tick);
 	}
 */
-{
-	static uint32_t next = millis() + 1000;
-	if(millis() >= next)
+
+	if(led_i2s_enable)
 	{
-		Serial.printf("int_cnt:%d ovrn:%d last_ovrn_p:%d rssi=%d chan=%d mode=%d %04x\r\n",interrupt_count, (int)interrupt_overrun_count, last_overrun_phase, WiFi.RSSI(), WiFi.channel(), current_interval_index, button_read);
+		static uint32_t next = millis() + 1000;
+		if(millis() >= next)
+		{
+			Serial.printf("int_cnt:%d ovrn:%d last_ovrn_p:%d rssi=%d chan=%d mode=%d %04x\r\n",interrupt_count, (int)interrupt_overrun_count, last_overrun_phase, WiFi.RSSI(), WiFi.channel(), current_interval_index, button_read);
 
-		interrupt_count = 0;
-		interrupt_overrun_count = 0;
-		next =millis() + 1000;
-		int n = analogRead(0);
-		Serial.printf("ambient=%d phy_mode=%d\r\n", n, WiFi.getPhyMode());
-
-
+			interrupt_count = 0;
+			interrupt_overrun_count = 0;
+			next =millis() + 1000;
+			int n = analogRead(0);
+			Serial.printf("ambient=%d phy_mode=%d\r\n", n, WiFi.getPhyMode());
+		}
 	}
-}
 
 }
 

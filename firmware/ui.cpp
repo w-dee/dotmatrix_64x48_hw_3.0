@@ -12,6 +12,7 @@
 #include "pendulum.h"
 #include "settings.h"
 #include "calendar.h"
+#include "sensors.h"
 
 
 #include "fonts/font_5x5.h"
@@ -19,18 +20,27 @@
 #include "fonts/font_bff.h"
 #include "fonts/font_aa.h"
 
+class screen_clock_t;
+
+static screen_clock_t *screen_clock; // base clock instance
 
 enum transition_t { t_none };
 
 
 class screen_base_t
 {
+	bool erase_bg = true; //!< whether to erase background automatically before draw()
+
 public:
 	//! The constructor
 	screen_base_t() {;}
 
 	//! The destructor
 	virtual ~screen_base_t() {;}
+
+
+	void set_erase_bg(bool b) { erase_bg = b; }
+	bool get_erase_bg() const { return erase_bg; }
 
 protected:
 
@@ -171,7 +181,8 @@ protected:
 
 				// dispatch draw event
 				// erase background
-				get_bg_frame_buffer().fill(0, 0, LED_MAX_LOGICAL_COL, LED_MAX_LOGICAL_ROW, 0);
+				if(top->get_erase_bg())
+					get_bg_frame_buffer().fill(0, 0, LED_MAX_LOGICAL_COL, LED_MAX_LOGICAL_ROW, 0);
 				if(top->draw()) show(t_none);
 			}
 		}
@@ -335,7 +346,18 @@ class screen_led_test_t : public screen_base_t
 	int x = -1;
 	int y = -1;
 
+public:
+	screen_led_test_t()
+	{
+		set_erase_bg(false);
+	}
+
 protected:
+	bool draw() override
+	{
+		return false;
+	}
+
 	void on_button(uint32_t button) override
 	{
 		switch(button)
@@ -429,7 +451,7 @@ protected:
 		fb().draw_text(0, 0, 255, title.c_str(), font_5x5);
 
 		// draw line
-		fb().fill(0, 7, LED_MAX_LOGICAL_COL, 1, 128);
+		fb().fill(0, 6, LED_MAX_LOGICAL_COL, 1, 128);
 
 		// draw line cursor
 		fb().fill((cursor - line_start) * 6, 7, 1, 5, get_blink_intensity()); 
@@ -439,9 +461,9 @@ protected:
 		{
 			// BS or DEL
 			if(x <= 2)
-				fb().fill(0, char_list_start_y, 6*2, char_list_start_y, get_blink_intensity()); // BS
+				fb().fill(0, char_list_start_y, 6*2, 6, get_blink_intensity()); // BS
 			else
-				fb().fill(6*3, char_list_start_y, 6*3, char_list_start_y,  get_blink_intensity()); // DEL
+				fb().fill(6*3, char_list_start_y, 6*3, 6,  get_blink_intensity()); // DEL
 		}
 		else if(y >= 2)
 		{
@@ -475,15 +497,15 @@ protected:
 		if(line_start + num_w_chars - 1 <= cursor)
 		{
 			line_start = cursor - (num_w_chars - 1) + 1;
-			int line_length = line.length();
-			if(line_start + num_w_chars > line_length)
-				line_start = line_length - num_w_chars;
 		}
 		if(line_start + 2 > cursor)
 		{
 			line_start = cursor - 2;
-			if(line_start < 0) line_start = 0;
 		}
+		int line_length = line.length();
+		if(line_start + num_w_chars > line_length)
+			line_start = line_length - num_w_chars;
+		if(line_start < 0) line_start = 0;
 	}
 
 	/**
@@ -808,7 +830,7 @@ class screen_dns_2_editor_t : public screen_ip_editor_t
 	ip_addr_settings_t settings;
 public:
 	screen_dns_2_editor_t(const ip_addr_settings_t & _settings) :
-		screen_ip_editor_t(F("DNS Srvr 2"), F("")), settings(_settings) {}
+		screen_ip_editor_t(F("DNS Srvr 2"), _settings.dns2), settings(_settings) {}
 
 protected:
 	void on_ok(const String & line) override
@@ -833,7 +855,7 @@ class screen_dns_1_editor_t : public screen_ip_editor_t
 	ip_addr_settings_t settings;
 public:
 	screen_dns_1_editor_t(const ip_addr_settings_t & _settings) :
-		screen_ip_editor_t(F("DNS Srvr 1"), F("")), settings(_settings) {}
+		screen_ip_editor_t(F("DNS Srvr 1"), _settings.dns1), settings(_settings) {}
 
 protected:
 	void on_ok(const String & line) override
@@ -856,7 +878,7 @@ class screen_net_mask_editor_t : public screen_ip_editor_t
 	ip_addr_settings_t settings;
 public:
 	screen_net_mask_editor_t(const ip_addr_settings_t & _settings) :
-		screen_ip_editor_t(F("Net Mask"), F("")), settings(_settings) {}
+		screen_ip_editor_t(F("Net Mask"), _settings.ip_mask), settings(_settings) {}
 
 protected:
 	bool validate(const String &line) override
@@ -867,12 +889,29 @@ protected:
 		// is valid netmask ??
 		// lower index is higher octet;
 		uint32_t v = (addr[0] << 24) + (addr[1] << 16) + (addr[2] << 8) + (addr[3] << 0);
-		v = 0 - (~v); // 0xffffffff -> 0, 0xffffff00 -> 0x00000100, 0xffff0000 -> 0x00010000 and so on
-		// at this point popcount of v must be 0 or 1 if the mask is valid
-		int cnt = 0;
-		while(v) { if(v & 1) ++cnt; v >>= 1; }
-		if(cnt == 0 || cnt == 1) return true;
-		return false;
+
+		bool valid = true;
+		bool one = true;
+		for(int i = 31; i>=0; --i)
+		{
+			if(!(v & (1<<i)))
+			{
+				// zero found
+				if(one)
+				{
+					one = false;
+					v = ~v; // invert all bits
+				}
+			}
+			/* fall through */
+			if(!(v & (1<<i)))
+			{
+				valid = false;
+				break; // non-consistent netmask
+			}
+		}
+
+		return valid;
 	}
 
 	void on_ok(const String & line) override
@@ -894,7 +933,7 @@ class screen_ip_gateway_editor_t : public screen_ip_editor_t
 	ip_addr_settings_t settings;
 public:
 	screen_ip_gateway_editor_t(const ip_addr_settings_t & _settings) :
-		screen_ip_editor_t(F("Net Mask"), F("")), settings(_settings) {}
+		screen_ip_editor_t(F("Gateway"), _settings.ip_gateway), settings(_settings) {}
 
 protected:
 	void on_ok(const String & line) override
@@ -917,7 +956,7 @@ class screen_ip_addr_editor_t : public screen_ip_editor_t
 	ip_addr_settings_t settings;
 public:
 	screen_ip_addr_editor_t(const ip_addr_settings_t & _settings) :
-		screen_ip_editor_t(F("IP Addr"), F("")), settings(_settings) {}
+		screen_ip_editor_t(F("IP Addr"), _settings.ip_addr), settings(_settings) {}
 
 protected:
 	void on_ok(const String & line) override
@@ -956,7 +995,7 @@ protected:
 		case 1: // Manual IP
 			screen_manager.push(
 				new screen_ip_addr_editor_t(
-					wifi_get_ip_addr_settings()));
+					wifi_get_ip_addr_settings(true)));
 			break;
 		}
 	}
@@ -1213,6 +1252,11 @@ protected:
 		}
 	}
 
+	void on_cancel() override
+	{
+		screen_manager.pop();
+	}
+
 	void on_idle_50() override
 	{
 		inherited::on_idle_50();
@@ -1221,34 +1265,7 @@ protected:
 		if(wifi_get_ap_name().length() == 0)
 			m = F("WiFi AP not configured.");
 		else
-		{
-			switch(WiFi.status())
-			{
-			case WL_CONNECTED:
-				m = String(F("Connected to \"")) + wifi_get_ap_name() + F("\"");
-				if((uint32_t)WiFi.localIP() == 0)
-					m += String(F(", but no IP address got."));
-				else
-					m += String(F(", IP address is ")) + WiFi.localIP().toString() + F(" .");
-				break;
-
-			case WL_NO_SSID_AVAIL:
-				m = String(F("AP \"")) + wifi_get_ap_name() + F("\" not available.");
-				break;
-
-			case WL_CONNECT_FAILED:
-				m = String(F("Connection to \"")) + wifi_get_ap_name() + F("\" failed.");
-				break;
-
-			case WL_IDLE_STATUS: // ?? WTF ??
-				m = String(F("Connection to \"")) + wifi_get_ap_name() + F("\" is idling.");
-				break;
-
-			case WL_DISCONNECTED:
-				m = String(F("Disconnected from \"")) + wifi_get_ap_name() + F("\".");
-				break;
-			}
-		}
+			m = wifi_get_connection_info_string();
 
 		set_marquee(m);
 	}
@@ -1256,71 +1273,50 @@ protected:
 
 
 
-
-#if 0
-static void ui_loop()
-{
-	for(;;)
-	{
-		ui_yield();
-
-		ui_led_test();
-/*
-		if(buttons[BUTTON_OK])
-		{
-			Serial.println("BUTTON_OK");
-			buttons[BUTTON_OK] = 0;
-			ir_record();
-		}
-
-		if(buttons[BUTTON_CANCEL])
-		{
-			Serial.println("BUTTON_CANCEL");
-			buttons[BUTTON_CANCEL] = 0;
-			ir_replay();
-		}
-
-		if(buttons[BUTTON_UP])
-		{
-			Serial.println("BUTTON_UP");
-			buttons[BUTTON_UP] = 0;
-
-		  double temperature, humidity, pressure;
-		  uint8_t measuring, im_update;
-		  char s[64];
-		  bme280.getData(&temperature, &humidity, &pressure);
-		int temp = temperature * 10;
-		int hum = humidity;
-		int pre = pressure;
-		 
-		  sprintf(s, "Temperature: %d.%d C, Humidity: %d %%, Pressure: %d hPa\r\n",
-				  temp / 10, temp%10, hum, pre);
-		  Serial.print(s);
-
-		}
-
-		if(buttons[BUTTON_DOWN])
-		{
-			Serial.println("BUTTON_DOWN");
-			buttons[BUTTON_DOWN] = 0;
-			int n = analogRead(0);
-			Serial.printf("ambient : %d\r\n", n);
-		}
-*/
-	}
-}
-#endif
-
 //! main clock ui
 class screen_clock_t : public screen_base_t
 {
+	String marquee; //!< marquee string
+	int marquee_len = 0; //!< marquee width
+	int marquee_x = 0; //!< marquee displaying x
+	int count = 0;
+
+public:
+	screen_clock_t() 
+	{
+		String r;
+		settings_write(F("ui_screen_clock_marquee"), F(""), SETTINGS_NO_OVERWRITE);
+		settings_read(F("ui_screen_clock_marquee"), r);
+
+		_set_marquee(r) ;
+	}
+
+public:
+	void set_marquee(const String &s)
+	{
+		settings_write(F("ui_screen_clock_marquee"), s);
+		_set_marquee(s);
+	}
+
+	String get_marquee() const { return marquee; }
+
+private:
+	void _set_marquee(const String &s)
+	{
+		if(!font_bff.get_available()) return;
+		marquee = s;
+		marquee_len = fb().get_text_width(s, font_bff);
+		if(marquee_x >= marquee_len) marquee_x = 0;
+	}
+
+protected:
 	bool draw() override
 	{
 		calendar_tm tm;
 		calendar_get_time(tm);
 
 		// hours and minutes
-		char buf[10];
+		char buf[20];
 		buf[0] = tm.tm_hour / 10 + '0';
 		buf[1] = 0;
 		fb().draw_text( 0, 0, 255, buf, font_large_digits);
@@ -1331,19 +1327,18 @@ class screen_clock_t : public screen_base_t
 
 		buf[0] = tm.tm_min / 10 + '0';
 		buf[1] = 0;
-		fb().draw_text(28, 0, 255, buf, font_large_digits);
+		fb().draw_text(29, 0, 255, buf, font_large_digits);
 
 		buf[0] = tm.tm_min % 10 + '0';
 		buf[1] = 0;
-		fb().draw_text(41, 0, 255, buf, font_large_digits);
+		fb().draw_text(42, 0, 255, buf, font_large_digits);
 
-		buf[0] = 0xE2; buf[1] = 0x82; buf[2] = 0x8f;
-		buf[3] = 0xE2; buf[4] = 0x82; buf[5] = tm.tm_sec / 10 + 0x80;
-		buf[6] = 0xE2; buf[7] = 0x82; buf[8] = tm.tm_sec % 10 + 0x80;
-		buf[9] = 0;
-		fb().draw_text(55, 13, 255, buf, font_5x5);
-		fb().fill(27,  5, 1, 2, 255);
-		fb().fill(27, 12, 1, 2, 255);
+		buf[0] = 0xE2; buf[1] = 0x82; buf[2] = tm.tm_sec / 10 + 0x80;
+		buf[3] = 0xE2; buf[4] = 0x82; buf[5] = tm.tm_sec % 10 + 0x80;
+		buf[6] = 0;
+		fb().draw_text(57, 13, 255, buf, font_5x5);
+		fb().fill(27,  5, 2, 2, 255);
+		fb().fill(27, 12, 2, 2, 255);
 
 		buf[0] = tm.tm_wday + '0';
 		buf[1] = 0;
@@ -1351,22 +1346,88 @@ class screen_clock_t : public screen_base_t
 
 		sprintf_P(buf, PSTR("%2d/%2d"), tm.tm_mon + 1, tm.tm_mday);
 		fb().draw_text(26, 19, 255, buf, font_bold_digits);
-		fb().draw_text(0, 28, 255, "30.1℃ 1024h 74%", font_4x5);
+
+		int temp = bme280_result.temp_10; // TODO: Fahrenheit degree
+		if(temp <= -100)
+		{
+			// under -10.0 deg C; ommit dot
+			sprintf_P(buf, PSTR("-%d"), (-temp + 5) / 10);
+		}
+		else if(temp < 0)
+		{
+			// -10.0 < temp < 0.0
+			sprintf_P(buf, PSTR("-%d.%d"), -temp / 10, -temp % 10);
+		}
+		else
+		{
+			// include dot
+			sprintf_P(buf, PSTR("%2d.%d"), temp/10, temp %10);
+		}
+		sprintf_P(buf + strlen(buf),
+			PSTR("℃ %4dh %2d%%"), bme280_result.pressure, bme280_result.humidity);
+		fb().draw_text(0, 28, 255, buf, font_4x5);
+
+
+		// draw marquee
+		if(font_bff.get_available())
+		{
+			fb().draw_text(-marquee_x              , 36, 255, marquee, font_bff);
+			if(marquee_len > LED_MAX_LOGICAL_COL)
+				fb().draw_text(-marquee_x + marquee_len, 36, 255, marquee, font_bff);
+		}
 		return true;
 	}
+
+	void on_button(uint32_t button) override
+	{
+		switch(button)
+		{
+		case BUTTON_OK:
+			// ok button; show settings
+			screen_manager.push(new screen_wifi_setting_t());
+			return;
+
+		}
+	}
+
+	void on_idle_10() override
+	{
+		++ count;
+		if(count >= 3)
+		{
+			count = 0;
+
+			if(marquee_len > LED_MAX_LOGICAL_COL)
+			{
+				++ marquee_x;
+				if(marquee_x >= marquee_len) marquee_x = 0;
+			}
+			else
+			{
+				marquee_x = 0;
+			}
+		}
+	}
+
 };
 
 
 void ui_setup()
 {
+	screen_clock = new screen_clock_t();
 
-//	screen_manager.push(new screen_ascii_editor_t("0123456789qwe"));
-//	screen_manager.push(new screen_ip_editor_t("IP addr", "012.88.77.65"));
-//	screen_manager.push(new screen_menu_t(F("Test menu"), {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"} ));
-	screen_manager.push(new screen_clock_t());
+	if(button_read & BUTTON_UP)
+		screen_manager.push(new screen_led_test_t());
+	else
+		screen_manager.push(screen_clock);
 }
 
 void ui_process()
 {
 	screen_manager.process_idle();
 }
+
+
+String ui_get_marquee() { return screen_clock->get_marquee(); }
+void ui_set_marquee(const String &s) { screen_clock->set_marquee(s); }
+

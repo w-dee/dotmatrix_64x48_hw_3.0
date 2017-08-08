@@ -23,7 +23,7 @@ struct ip_addr_settings_t
 
 const String & wifi_get_ap_name();
 const String & wifi_get_ap_pass();
-const ip_addr_settings_t & wifi_get_ip_addr_settings();
+ip_addr_settings_t wifi_get_ip_addr_settings(bool use_current_config = false);
 
 void wifi_set_ap_info(const String &_ap_name, const String &_ap_pass);
 
@@ -31,6 +31,8 @@ void wifi_set_ap_info(const String &_ap_name, const String &_ap_pass,
 	const ip_addr_settings_t & ip);
 
 void wifi_manual_ip_info(const ip_addr_settings_t & ip);
+
+String wifi_get_connection_info_string();
 
 #endif
 

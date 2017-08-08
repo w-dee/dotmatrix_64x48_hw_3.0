@@ -28,6 +28,8 @@ static constexpr size_t MAX_NTP_SERVERS = 3;
 string_vector calendar_get_ntp_server();
 void calendar_set_ntp_server(const string_vector & servers);
 
+int calendar_get_timezone(); // returns +-hhmm representation of the timezone; eg. 900 for UTC+9:00
+void calendar_set_timezone(int); 
 
 
 #endif

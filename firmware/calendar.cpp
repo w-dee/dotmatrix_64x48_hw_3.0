@@ -19,7 +19,7 @@ static string_vector ntp_servers;
 static string_vector shadow_ntp_servers;
 	// it seems that lwip's ntp server name is just a pointer, so keeping
 	// memory content is responsivility of the caller.
-
+static int timezone; // current timezone
 /**
  * set sntp server and tz from ntp_servers
  */
@@ -34,7 +34,8 @@ static void calendar_set_ntp_servers_from_vector()
 			const_cast<char *>(shadow_ntp_servers[i].c_str()));
 	}
 
-	
+	sntp_set_timezone(timezone / 100);
+
 }
 
 void calendar_init()
@@ -48,13 +49,14 @@ void calendar_init()
 			F("ntp3.jst.mfeed.ad.jp") },
 				SETTINGS_NO_OVERWRITE );
 	settings_read_vector(F("cal_ntp_servers"), ntp_servers);
-	calendar_set_ntp_servers_from_vector();
 
-	settings_write(F("cal_time_zone"), F("9"), SETTINGS_NO_OVERWRITE);
+	settings_write(F("cal_timezone"), F("900"), SETTINGS_NO_OVERWRITE);
 
 	String s;
-	settings_read(F("cal_time_zone"), s);
-	sntp_set_timezone(s.toInt());
+	settings_read(F("cal_timezone"), s);
+	timezone = s.toInt();
+
+	calendar_set_ntp_servers_from_vector();
 }
 
 #if 0
@@ -81,6 +83,21 @@ void calendar_set_ntp_server(const string_vector & servers)
 	if(servers.size() > MAX_NTP_SERVERS) return;
 
 	ntp_servers = servers;
+	settings_write_vector(F("cal_ntp_servers"), ntp_servers);
+	calendar_set_ntp_servers_from_vector();
+}
+
+int calendar_get_timezone()
+{
+	return timezone;
+}
+void calendar_set_timezone(int tz)
+{
+	timezone = tz;
+	char buf[10];
+	sprintf_P(buf, PSTR("%d"), tz);
+	settings_write(F("cal_timezone"), buf);
+
 	calendar_set_ntp_servers_from_vector();
 }
 

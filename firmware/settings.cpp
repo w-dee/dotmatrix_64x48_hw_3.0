@@ -126,15 +126,21 @@ bool settings_read(const String & _key, String & value)
 	if(!settings_check_crc(file)) { file.close(); return false; }
 
 	size_t size = file.size() - CHECKSUM_SIZE;
-	if(!value.reserve(size))
+	char *buf = new char[size + 1];
+	if(!buf)
 	{
 		file.close();
 		return false; // no memory ?
 	}
-	char * ptr = const_cast<char *> (value.c_str());
-	bool success = size == file.read(reinterpret_cast<uint8_t *>(ptr), size);
-	if(success) ptr[size] = '\0';
 
+	bool success = size == file.read(reinterpret_cast<uint8_t *>(buf), size);
+	if(success)
+	{
+		buf[size] = '\0';
+		value = buf;
+	}
+
+	delete [] buf;
 	file.close();
 	return success;
 }

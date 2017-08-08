@@ -167,6 +167,24 @@ const PROGMEM glyph_vw_t font_4x5_data[]= {
 	"@  @    "_b,
 	}
 },
+{ // '-' - 16
+3, {
+	"        "_b,
+	"        "_b,
+	"@@@     "_b,
+	"        "_b,
+	"        "_b,
+	}
+},
+{ // L'\'' - 17
+1, {
+	"@       "_b,
+	"        "_b,
+	"        "_b,
+	"        "_b,
+	"        "_b,
+	}
+},
 
 
 }; 
@@ -183,6 +201,8 @@ static int chr_to_index(int32_t chr)
 	case L'℃': return 13;
 	case 'h': return 14;
 	case '%': return 15;
+	case '-': return 16;
+	case '\'': return 17;
 	default:;
 	}
 	return -1;

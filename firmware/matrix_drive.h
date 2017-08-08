@@ -9,7 +9,8 @@ enum led_interval_mode_t {
 	LIM_MODE2,
 	LIM_PWM_OFF
 };
-
+void led_disable_i2s_output();
+void led_pre_init();
 void led_init();
 void led_write_settings();
 extern uint32_t button_read;

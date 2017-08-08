@@ -72,7 +72,6 @@ void button_update()
 		if((int32_t)(now - next_button_check) > 0)
 			next_button_check = now + 10; // still in past; reset next_button_check
 	}
-
 }
 
 uint32_t button_get()

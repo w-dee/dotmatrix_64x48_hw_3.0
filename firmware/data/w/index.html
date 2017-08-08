@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, user-scalable=no" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
 
-    <title>Mazo Clock</title>
+    <title>Mazo Clock 3</title>
     <meta name="description" content="${description}" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <script src="js/promise.min.js"></script>
@@ -15,39 +15,113 @@
  <!--   <link rel="stylesheet" href="todo.css"> -->
 
     <!--[if lt IE 9]>
-    <script src="js/es5-shim.min.js"></script>
-    <script src="js/html5shiv.min.js"></script>
-    <script>html5.addElements('todo')</script>
+		<!-- Browser not supported. -->
     <![endif]-->
 
   </head>
 
   <body>
-    <collapsible headding='"admin" Password'>
-		content1
-    </collapsible>
-    <collapsible headding='Clock Setting'>
-		content2
-    </collapsible>
-    <collapsible headding='Button Control'>
-    	<button-control> </button-control>
-    </collapsible>
+	<collapsible headding='"admin" Password'>
+		<adminsettings> </adminsettings>
+	</collapsible>
 
-    <script type="riot/tag">
-      <collapsible>
-        <h1 onclick={ click }>{ headding }</h1>
-        <div if={ visible }>
-        <yield/>
-        </div>
-        this.headding = opts.headding
-		click(e) {
-			this.visible = !this.visible
-		}
-      </collapsible>
-    </script>
+	<collapsible headding='Clock Settings'>
+		<clocksettings> </clocksettings>
+	</collapsible>
+
+	<collapsible headding='Marquee'>
+		<marqueesettings> </marqueesettings>
+	</collapsible>
+
+	<collapsible headding='Button Control'>
+		<buttoncontrol> </buttoncontrol>
+	</collapsible>
+
+	<collapsible headding='Settings Import/Export'>
+		<importexport> </importexport>
+	</collapsible>
+
+	<collapsible headding='Firmware Upgrade'>
+		<firmwareupgrade></firmwareupgrade>
+	</collapsible>
+
+	<collapsible headding='About'>
+		<about></about>
+	</collapsible>
 
 	<script type="riot/tag">
-		<button-control>
+		<adminsettings>
+			<form onsubmit={ submit } ref="form">
+				"admin" user password: <input type="password" name="admin_pass" ref="admin_pass"
+					value={ window.settings.values.admin_pass }/><br  />
+				<button type="submit" ref="submit">Set</button>
+			</form>
+
+			submit(e) {
+	 			e.preventDefault();
+				window.settings.values.admin_pass = this.refs.admin_pass.value;
+				fetch('/settings/admin_pass', {
+					method: 'POST',
+					credentials: 'same-origin',
+					body: new FormData(this.refs.form)
+					}).then(function(responce){ window.location.reload(); });
+			}
+
+		</adminsettings>
+	</script>
+
+	<script type="riot/tag">
+		<clocksettings>
+			<form onsubmit={ submit } ref="form">
+				NTP server 1: <input type="text" name="ntp1" ref="ntp1"
+					value={ window.settings.values.cal_ntp_servers[0] }/><br  />
+				NTP server 2: <input type="text" name="ntp2" ref="ntp2"
+					value={ window.settings.values.cal_ntp_servers[1] }/><br  />
+				NTP server 3: <input type="text" name="ntp3" ref="ntp3"
+					value={ window.settings.values.cal_ntp_servers[2] }/><br  />
+				Time Zone : UTC + <input type="text" name="tz" ref="tz" 
+					value={ window.settings.values.cal_timezone }/><br  />
+				<button type="submit" ref="submit">Set</button>
+			</form>
+
+			submit(e) {
+	 			e.preventDefault();
+				window.settings.values.cal_ntp_servers[0] = this.refs.ntp1.value;
+				window.settings.values.cal_ntp_servers[1] = this.refs.ntp2.value;
+				window.settings.values.cal_ntp_servers[2] = this.refs.ntp3.value;
+				window.settings.values.cal_timezone = this.refs.tz.value;
+				fetch('/settings/calendar', {
+					method: 'POST',
+					credentials: 'same-origin',
+					body: new FormData(this.refs.form)
+					}).then(function(responce){});
+			}
+		</clocksettings>
+	</script>
+
+	<script type="riot/tag">
+		<marqueesettings>
+			<form onsubmit={ submit } ref="form">
+				Marquee string: <input type="text" name="ui_marquee" ref="ui_marquee"
+					value={ window.settings.values.ui_marquee }/><br  />
+				<button type="submit" ref="submit">Set</button>
+			</form>
+
+			submit(e) {
+	 			e.preventDefault();
+				window.settings.values.ui_marquee = this.refs.ui_marquee.value;
+				fetch('/settings/ui_marquee', {
+					method: 'POST',
+					credentials: 'same-origin',
+					body: new FormData(this.refs.form)
+					}).then(function(responce){});
+			}
+
+		</marqueesettings>
+	</script>
+
+	<script type="riot/tag">
+		<buttoncontrol>
 			<table>
 				<tr> <td>  </td><td><button onclick={ up }>↑</button></td><td>  </td><td> </td></tr>
 				<tr> <td><button onclick={ left }>←</button></td><td>  </td><td><button onclick={ right }>→</button></td><td> </td></tr>
@@ -74,13 +148,70 @@
 			fetch('/keys/C', {credentials: 'same-origin'}).then(function(responce){})
 		}
 
-		</button-control>
+		</buttoncontrol>
  	</script>
- 
-    <script>
-      // マウント
-      riot.mount('*');
-    </script>
+
+	<script type="riot/tag">
+		<importexport>
+			<form method='GET' action='/settings/export'>
+				<input type="submit" value="Export">
+			</form>
+			<br />
+			<form method='POST' action='/settings/import' enctype='multipart/form-data'>
+				<input type='file' name='update'>
+				<input type='submit' value='Import'>
+			</form>
+		</importexport>
+	</script>
+
+
+	<script type="riot/tag">
+		<firmwareupgrade>
+			<form method='POST' action='/update' enctype='multipart/form-data'>
+				<input type='file' name='update'>
+				<input type='submit' value='Update'>
+			</form>
+		</firmwareupgrade>
+	</script>
+
+	<script type="riot/tag">
+		<about>
+			<div>Mazo clock 3 by W.Dee: wdee.elec.kit.sup@gmail.com </div>
+			<div>Page : <a href="https://w-dee.github.io/dotmatrix_64x48/">https://w-dee.github.io/dotmatrix_64x48/</a></div>
+			
+			<div>Source : <a href="https://github.com/w-dee/dotmatrix_64x48/">https://github.com/w-dee/dotmatrix_64x48/</a></div>
+			
+			<div>Built at
+				{ window.settings.values.version_info.date } 
+				{ window.settings.values.version_info.time }
+			</div>
+			<div>Source version: { window.settings.values.version_info.src_version }</div>
+			<div>ESP8266 Arduino core version: { window.settings.values.version_info.env_version }</div>
+			<div><a href="LICENSE.txt">License information</a></div>
+		</about>
+	</script>
+
+	<script
+		src="settings/settings.js"></script>
+
+	<script type="riot/tag">
+		<collapsible>
+			<h1 onclick={ click }>{ headding }</h1>
+			<div if={ visible }>
+				<yield/>
+			</div>
+
+			this.headding = opts.headding
+			click(e) {
+				this.visible = !this.visible
+			}
+		</collapsible>
+	</script>
+
+	<script>
+		// マウント
+		riot.mount('*');
+	</script>
 
   </body>
 

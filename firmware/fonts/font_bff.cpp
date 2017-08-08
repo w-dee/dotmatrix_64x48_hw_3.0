@@ -46,6 +46,9 @@ bff_font_t::bff_font_t() :
 
 void bff_font_t::begin(uint32_t start_addr)
 {
+	// invalidate
+	available = false;
+
 	// open the file
 	file.init(start_addr);
 
@@ -116,6 +119,7 @@ void bff_font_t::begin(uint32_t start_addr)
 
 Serial.printf("Font nominal height: %d\r\n", nominal_height);
 Serial.printf("Font num_glyphs    : %d\r\n", num_glyphs);
+	available = true;
 
 	return;
 error:

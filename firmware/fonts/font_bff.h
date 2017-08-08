@@ -55,7 +55,7 @@ public:
 	static constexpr uint16_t FLAGS_COMPRESSION_METHOD_ZERO_RUNLENGTH_DIFF = 0x00;
 	static constexpr uint16_t FLAGS_COMPRESSION_METHOD_ZERO_RUNLENGTH = 0x01;
 
-	static constexpr int CACHE_LIMIT = 30;
+	static constexpr int CACHE_LIMIT = 64;
 	
 #pragma pack(push, 1)
 	struct glyph_info_t
@@ -110,12 +110,16 @@ private:
 
 	mutable glyph_cache_t glyph_cache;
 
+	bool available = false;
+
 public: // font_base_t methods
 	virtual int get_height() const { return nominal_height; } //!< returns font's nominal height in px
 
 	virtual metrics_t get_metrics(int32_t chr) const;
 
 	virtual void put(int32_t chr, int level, int x, int y, frame_buffer_t & fb) const;
+
+	bool get_available() const { return available; }
 
 public:
 	bff_font_t();

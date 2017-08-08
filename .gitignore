@@ -39,3 +39,6 @@ combined_rom.bin
 # private development tools
 dtools/
 
+# regeneratable .gz
+firmware/data/w/index.html.gz
+

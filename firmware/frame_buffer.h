@@ -53,6 +53,13 @@ public:
 
 	void draw_text(int x, int y, int level, const char *s, const font_base_t & font);
 
+	//! Get text width specified by the string and font
+	int get_text_width(const String &s, const font_base_t & font)
+	{
+		return get_text_width(s.c_str(), font);
+	}
+
+	int get_text_width(const char *s, const font_base_t & font);
 
 	//! fill all region with specified value
 	void fill(int level);

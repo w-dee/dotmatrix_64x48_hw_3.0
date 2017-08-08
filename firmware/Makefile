@@ -6,7 +6,8 @@ SETTINGS_FS_UPLOAD_COM := $(shell echo $(FS_UPLOAD_COM) | perl -npe 's! -ca .*! 
 
 SETTINGS_MKSPIFFS_COM := $(shell echo $(MKSPIFFS_COM) | perl -npe 's! -s .*! -s $(SETTINGS_SPIFFS_SIZE) -c settings $(SETTINGS_FS_IMAGE)!' )
 
-MKSPIFFS_COM := $(shell echo $(MKSPIFFS_COM) | perl -npe 's! -s [^ ]*! -s $(MY_SPIFFS_SIZE)!' ) &&\
+MKSPIFFS_COM := (cd data/w && gzip -kf -9 LICENSE.txt) && (perl compile_html.pl data/w/index.html data/w/ | gzip -9 > data/w/index.html.gz) && \
+	$(shell echo $(MKSPIFFS_COM) | perl -npe 's! -s [^ ]*! -s $(MY_SPIFFS_SIZE)!' ) && \
 	cat $(BFF_FONT_FILE_NAME) >> $(FS_IMAGE)
 
 $(FS_IMAGE): $(BFF_FONT_FILE_NAME)
