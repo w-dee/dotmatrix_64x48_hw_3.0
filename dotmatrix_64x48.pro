@@ -1,4 +1,4 @@
-update=2017年06月23日 10時48分53秒
+update=2017年09月01日 17時03分55秒
 version=1
 last_client=kicad
 [pcbnew]
@@ -27,7 +27,7 @@ NetIExt=net
 version=1
 [eeschema]
 version=1
-LibDir=../../kicad-library/components
+LibDir=../kicad-library/components
 [eeschema/libraries]
 LibName1=power
 LibName2=device
@@ -75,3 +75,4 @@ LibName43=ttl_ieee
 LibName44=diode
 LibName45=wiznet
 LibName46=mechanical
+LibName47=microchip_pic32mcu

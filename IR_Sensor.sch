@@ -45,12 +45,13 @@ LIBS:ttl_ieee
 LIBS:diode
 LIBS:wiznet
 LIBS:mechanical
+LIBS:microchip_pic32mcu
 LIBS:dotmatrix_64x48-cache
 EELAYER 26 0
 EELAYER END
 $Descr A4 11693 8268
 encoding utf-8
-Sheet 2 9
+Sheet 2 11
 Title ""
 Date ""
 Rev ""
@@ -470,4 +471,209 @@ Connection ~ 3600 3100
 Wire Wire Line
 	3600 3500 3600 3600
 Connection ~ 3600 3600
+$Comp
+L R R12
+U 1 1 59A7F66F
+P 3500 5500
+F 0 "R12" V 3500 5450 50  0000 L CNN
+F 1 "1k" V 3600 5400 50  0000 L CNN
+F 2 "Resistors_SMD:R_0603_HandSoldering" V 3430 5500 50  0001 C CNN
+F 3 "" H 3500 5500 50  0000 C CNN
+	1    3500 5500
+	0    -1   -1   0   
+$EndComp
+$Comp
+L R R42
+U 1 1 59A7F676
+P 4050 5750
+F 0 "R42" V 4050 5650 50  0000 L CNN
+F 1 "10k DNI" V 3950 5600 50  0000 L CNN
+F 2 "Resistors_SMD:R_0603_HandSoldering" V 3980 5750 50  0001 C CNN
+F 3 "" H 4050 5750 50  0000 C CNN
+	1    4050 5750
+	0    1    -1   0   
+$EndComp
+$Comp
+L GND #PWR?
+U 1 1 59A7F67D
+P 4450 5800
+F 0 "#PWR?" H 4450 5550 50  0001 C CNN
+F 1 "GND" H 4450 5650 50  0000 C CNN
+F 2 "" H 4450 5800 50  0000 C CNN
+F 3 "" H 4450 5800 50  0000 C CNN
+	1    4450 5800
+	-1   0    0    -1  
+$EndComp
+$Comp
+L VCC #PWR?
+U 1 1 59A7F683
+P 4950 5000
+F 0 "#PWR?" H 4950 4850 50  0001 C CNN
+F 1 "VCC" H 4967 5173 50  0000 C CNN
+F 2 "" H 4950 5000 50  0000 C CNN
+F 3 "" H 4950 5000 50  0000 C CNN
+	1    4950 5000
+	-1   0    0    -1  
+$EndComp
+$Comp
+L C C4
+U 1 1 59A7F689
+P 4950 5550
+F 0 "C4" H 5065 5596 50  0000 L CNN
+F 1 "1u" H 5065 5505 50  0000 L CNN
+F 2 "Capacitors_SMD:C_0603_HandSoldering" H 5065 5459 50  0001 L CNN
+F 3 "" H 4950 5550 50  0000 C CNN
+	1    4950 5550
+	1    0    0    -1  
+$EndComp
+$Comp
+L C C3
+U 1 1 59A7F690
+P 3500 5700
+F 0 "C3" H 3615 5746 50  0000 L CNN
+F 1 "220p" H 3615 5655 50  0000 L CNN
+F 2 "Capacitors_SMD:C_0603_HandSoldering" H 3615 5609 50  0001 L CNN
+F 3 "" H 3500 5700 50  0000 C CNN
+	1    3500 5700
+	0    1    1    0   
+$EndComp
+$Comp
+L C C2
+U 1 1 59A7F697
+P 2900 5500
+F 0 "C2" H 3015 5546 50  0000 L CNN
+F 1 "0.1u" H 3015 5455 50  0000 L CNN
+F 2 "Capacitors_SMD:C_0603_HandSoldering" H 3015 5409 50  0001 L CNN
+F 3 "" H 2900 5500 50  0000 C CNN
+	1    2900 5500
+	0    1    1    0   
+$EndComp
+Text GLabel 2100 5500 0    60   Input ~ 0
+IR_OUT
+$Comp
+L Q_NPN_BCE Q1
+U 1 1 59A7F69F
+P 4350 5500
+F 0 "Q1" H 4541 5591 50  0000 L CNN
+F 1 "Q_NPN_BCE RN5006" H 3650 5700 50  0000 L CNN
+F 2 "TO_SOT_Packages_SMD:SOT89-3_Housing_Handsoldering" H 4541 5409 50  0001 L CNN
+F 3 "" H 4350 5500 50  0000 C CNN
+	1    4350 5500
+	1    0    0    -1  
+$EndComp
+$Comp
+L Ferrite_Bead_Small L6
+U 1 1 59A7F6A6
+P 5300 5100
+F 0 "L6" V 5122 5100 50  0000 C CNN
+F 1 "BLM21PG331SN 300R@100MHz" V 5050 4750 50  0000 C CNN
+F 2 "Capacitors_SMD:C_0805_HandSoldering" H 5300 5100 50  0001 C CNN
+F 3 "" H 5300 5100 50  0000 C CNN
+	1    5300 5100
+	0    -1   1    0   
+$EndComp
+$Comp
+L D_TVS_x2_AAC D12
+U 1 1 59A7F6AD
+P 5600 5600
+F 0 "D12" H 5600 5816 50  0000 C CNN
+F 1 "PESD12VL2BT" H 5600 5725 50  0000 C CNN
+F 2 "TO_SOT_Packages_SMD:SOT-23_Handsoldering" H 5600 5724 50  0001 C CNN
+F 3 "" H 5450 5600 50  0000 C CNN
+	1    5600 5600
+	-1   0    0    -1  
+$EndComp
+$Comp
+L D_Schottky_Small D14
+U 1 1 59A7F6B4
+P 2600 5750
+F 0 "D14" H 2600 5637 50  0000 C CNN
+F 1 "D_Schottky_Small" H 2600 5636 50  0001 C CNN
+F 2 "components:SOD-523-mod" H 2600 5636 50  0001 C CNN
+F 3 "" V 2600 5750 50  0000 C CNN
+	1    2600 5750
+	0    1    1    0   
+$EndComp
+$Comp
+L GND #PWR?
+U 1 1 59A7F6BB
+P 2600 5850
+F 0 "#PWR?" H 2600 5600 50  0001 C CNN
+F 1 "GND" H 2605 5677 50  0000 C CNN
+F 2 "" H 2600 5850 50  0000 C CNN
+F 3 "" H 2600 5850 50  0000 C CNN
+	1    2600 5850
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	4450 5700 4450 5800
+Wire Wire Line
+	3900 5750 3800 5750
+Wire Wire Line
+	3800 5750 3800 5500
+Connection ~ 3800 5500
+Wire Wire Line
+	3650 5500 4150 5500
+Connection ~ 4450 5750
+Wire Wire Line
+	3650 5700 3700 5700
+Wire Wire Line
+	3700 5700 3700 5500
+Connection ~ 3700 5500
+Wire Wire Line
+	3350 5700 3250 5700
+Wire Wire Line
+	3250 5700 3250 5500
+Connection ~ 3250 5500
+Wire Wire Line
+	3050 5500 3350 5500
+Wire Wire Line
+	4450 5200 4850 5200
+Wire Wire Line
+	4450 5300 4450 5200
+Wire Wire Line
+	4950 5100 5200 5100
+Wire Wire Line
+	4950 5000 4950 5400
+Connection ~ 4950 5100
+Wire Wire Line
+	4950 5750 4950 5700
+Connection ~ 4950 5750
+Wire Wire Line
+	4850 5200 4850 5350
+Wire Wire Line
+	4200 5750 6000 5750
+Wire Wire Line
+	5950 5350 5950 5600
+Wire Wire Line
+	4850 5350 6000 5350
+Connection ~ 5950 5350
+Wire Wire Line
+	5250 5600 5250 5250
+Wire Wire Line
+	5250 5250 6000 5250
+Wire Wire Line
+	5400 5100 5500 5100
+Wire Wire Line
+	5500 5100 5500 5250
+Connection ~ 5500 5250
+Wire Wire Line
+	2600 5650 2600 5500
+Wire Wire Line
+	2100 5500 2750 5500
+Connection ~ 2600 5500
+$Comp
+L CONN_01X03 CONN3
+U 1 1 59A7F6E2
+P 6200 5350
+F 0 "CONN3" H 6118 5025 50  0000 C CNN
+F 1 "Push_Terminal_3P_2.54" H 6118 5116 50  0001 C CNN
+F 2 "components:Push_Terminal_3P_2.54" H 6277 5254 50  0001 L CNN
+F 3 "" H 6200 5350 50  0000 C CNN
+	1    6200 5350
+	1    0    0    1   
+$EndComp
+Wire Wire Line
+	6000 5750 6000 5450
+Connection ~ 5600 5750
 $EndSCHEMATC

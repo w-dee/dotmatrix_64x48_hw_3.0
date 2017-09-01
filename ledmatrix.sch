@@ -45,12 +45,13 @@ LIBS:ttl_ieee
 LIBS:diode
 LIBS:wiznet
 LIBS:mechanical
+LIBS:microchip_pic32mcu
 LIBS:dotmatrix_64x48-cache
 EELAYER 26 0
 EELAYER END
 $Descr A4 11693 8268
 encoding utf-8
-Sheet 3 9
+Sheet 3 11
 Title ""
 Date ""
 Rev ""
